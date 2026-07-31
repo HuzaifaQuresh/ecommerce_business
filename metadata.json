@@ -1,0 +1,6 @@
+{
+  "name": "Nexus IoT Store",
+  "description": "A high-performance e-commerce platform for IoT devices, smart controllers, development boards, and hardware solutions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
