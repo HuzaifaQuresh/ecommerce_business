@@ -9,7 +9,7 @@
  * This component reads them, exchanges them for a session, and redirects.
  */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,15 +24,53 @@ function AuthCallback() {
   const [status, setStatus] = useState<"processing" | "error" | "done">("processing");
   const [message, setMessage] = useState("Verifying your link…");
 
+  const handleType = useCallback(
+    (type: string) => {
+      if (type === "recovery") {
+        setMessage("Password reset verified — redirecting…");
+        setStatus("done");
+        setTimeout(() => navigate({ to: "/auth/reset-password" }), 800);
+      } else {
+        // signup, magiclink, invite, google → send to role-based dashboard
+        setMessage("Authentication verified — signing you in…");
+        setStatus("done");
+        setTimeout(async () => {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (!session) {
+            navigate({ to: "/auth" });
+            return;
+          }
+          const { data: roles } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", session.user.id);
+          const list = (roles ?? []).map((r) => r.role as string);
+          if (list.includes("super_admin") || list.includes("admin")) {
+            navigate({ to: "/admin" });
+          } else if (list.includes("vendor")) {
+            navigate({ to: "/vendor" });
+          } else {
+            navigate({ to: "/account" });
+          }
+        }, 800);
+      }
+    },
+    [navigate]
+  );
+
   useEffect(() => {
     const hash = typeof window !== "undefined" ? window.location.hash : "";
+    const search = typeof window !== "undefined" ? window.location.search : "";
 
-    // Parse fragment params: #access_token=…&type=recovery&…
-    const params = new URLSearchParams(hash.replace(/^#/, ""));
+    // Parse fragment params or query params (OAuth code/tokens)
+    const params = new URLSearchParams(hash.replace(/^#/, "") || search.replace(/^\?/, ""));
     const type = params.get("type");
     const accessToken = params.get("access_token");
     const refreshToken = params.get("refresh_token");
     const errorDesc = params.get("error_description");
+    const code = params.get("code");
 
     if (errorDesc) {
       setStatus("error");
@@ -40,14 +78,27 @@ function AuthCallback() {
       return;
     }
 
+    if (code) {
+      // Exchange code for session if Supabase PKCE flow is used
+      supabase.auth.exchangeCodeForSession(window.location.href).then(({ error }) => {
+        if (error) {
+          setStatus("error");
+          setMessage(error.message);
+        } else {
+          handleType(type ?? "signup");
+        }
+      });
+      return;
+    }
+
     if (!accessToken) {
-      // Maybe Supabase already exchanged the session (PKCE flow)
+      // Maybe Supabase already exchanged the session
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
           handleType(type ?? "signup");
         } else {
           setStatus("error");
-          setMessage("Invalid or expired link. Please request a new one.");
+          setMessage("Invalid or expired session. Please sign in again.");
         }
       });
       return;
@@ -64,40 +115,7 @@ function AuthCallback() {
           handleType(type ?? "signup");
         }
       });
-  }, []);
-
-  const handleType = (type: string) => {
-    if (type === "recovery") {
-      setMessage("Password reset verified — redirecting…");
-      setStatus("done");
-      setTimeout(() => navigate({ to: "/auth/reset-password" }), 800);
-    } else {
-      // signup, magiclink, invite → send to role-based dashboard
-      setMessage("Email confirmed — signing you in…");
-      setStatus("done");
-      setTimeout(async () => {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session) {
-          navigate({ to: "/auth" });
-          return;
-        }
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id);
-        const list = (roles ?? []).map((r) => r.role as string);
-        if (list.includes("super_admin") || list.includes("admin")) {
-          navigate({ to: "/admin" });
-        } else if (list.includes("vendor")) {
-          navigate({ to: "/vendor" });
-        } else {
-          navigate({ to: "/account" });
-        }
-      }, 800);
-    }
-  };
+  }, [handleType]);
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
