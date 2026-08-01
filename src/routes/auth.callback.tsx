@@ -57,7 +57,7 @@ function AuthCallback() {
         }, 800);
       }
     },
-    [navigate]
+    [navigate],
   );
 
   useEffect(() => {

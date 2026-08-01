@@ -685,7 +685,10 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
             try {
               const res = await originalAuth.signInWithOAuth({ provider, options });
               if (res.error) {
-                console.warn("Supabase OAuth error, falling back to local Google session:", res.error.message);
+                console.warn(
+                  "Supabase OAuth error, falling back to local Google session:",
+                  res.error.message,
+                );
                 if (isClient) {
                   const googleUser = {
                     id: "usr-google-" + Math.random().toString(36).substring(2, 9),
@@ -703,7 +706,10 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
               }
               return res;
             } catch (err: any) {
-              console.warn("Supabase OAuth exception, falling back to local Google session:", err?.message);
+              console.warn(
+                "Supabase OAuth exception, falling back to local Google session:",
+                err?.message,
+              );
               if (isClient) {
                 const googleUser = {
                   id: "usr-google-" + Math.random().toString(36).substring(2, 9),

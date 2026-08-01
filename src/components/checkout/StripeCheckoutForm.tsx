@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { createPaymentIntent } from "@/api/stripe";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { updateOrderStatus } from "@/api/orders";
-import { StripeProvider } from "./StripeProvider";
 
-function CheckoutForm({
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || "pk_test_placeholder");
+
+function InnerStripeCheckoutForm({
   clientSecret,
   onSuccess,
   amountLabel,
@@ -41,14 +43,14 @@ function CheckoutForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <PaymentElement />
-      <Button disabled={!stripe || isProcessing} className="w-full min-h-[48px]">
+      <Button type="submit" disabled={!stripe || isProcessing} className="w-full min-h-[48px]">
         {isProcessing ? "Processing..." : `Pay ${amountLabel}`}
       </Button>
     </form>
   );
 }
 
-export function StripePaymentWrapper({
+export function StripeCheckoutForm({
   orderId,
   amountPkr,
   onSuccess,
@@ -68,29 +70,28 @@ export function StripePaymentWrapper({
       })
       .catch((err) => {
         console.error(err);
-        toast.error("Failed to initialize payment");
+        toast.error("Failed to initialize payment gateway");
       });
   }, [amountPkr]);
 
   if (!clientSecret) {
     return (
-      <div className="text-sm text-muted-foreground py-4 text-center">
-        Initializing secure payment gateway...
+      <div className="text-sm text-muted-foreground py-8 text-center animate-pulse">
+        Initializing secure Stripe payment gateway...
       </div>
     );
   }
 
   return (
-    <StripeProvider clientSecret={clientSecret}>
-      <CheckoutForm
+    <Elements stripe={stripePromise} options={{ clientSecret }}>
+      <InnerStripeCheckoutForm
         clientSecret={clientSecret}
         amountLabel={amountLabel}
         onSuccess={async () => {
-          // Optimistically update order status
           await updateOrderStatus(orderId, "processing").catch(() => {});
           onSuccess();
         }}
       />
-    </StripeProvider>
+    </Elements>
   );
 }
