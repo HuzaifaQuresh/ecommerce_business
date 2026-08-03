@@ -35,11 +35,15 @@ import { primaryRole } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { ContactUsDialog } from "@/components/site/ContactUsDialog";
 import { TrackOrderDialog } from "@/components/site/TrackOrderDialog";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 export function Header() {
   const { count, setDrawerOpen } = useCart();
   const { count: wishlistCount, setDrawerOpen: setWishlistOpen } = useWishlist();
   const { user, roles, isAdmin, isSuperAdmin, isVendor, signOut } = useAuth();
+  const { data: settings } = useSiteSettings();
+  const siteName = String(settings?.site_name ?? "NexusIoT").replace(/"/g, "");
+  const siteLogoUrl = settings?.site_logo ? String(settings.site_logo).replace(/"/g, "") : "";
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [q, setQ] = useState("");
@@ -124,8 +128,12 @@ export function Header() {
             <SheetContent side="left" className="w-full max-w-xs p-0 flex flex-col">
               <SheetHeader className="border-b px-4 py-4 text-left">
                 <SheetTitle className="flex items-center gap-2">
-                  <Cpu className="h-5 w-5 text-primary" />
-                  NexusIoT
+                  {siteLogoUrl ? (
+                    <img src={siteLogoUrl} alt="Logo" className="h-5 w-5 rounded object-cover" />
+                  ) : (
+                    <Cpu className="h-5 w-5 text-primary" />
+                  )}
+                  {siteName}
                 </SheetTitle>
               </SheetHeader>
               <nav className="flex-1 overflow-y-auto p-4 space-y-1 text-sm">
@@ -218,11 +226,19 @@ export function Header() {
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0 min-w-0">
-            <div className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-md bg-primary text-primary-foreground">
-              <Cpu className="h-4 w-4 sm:h-5 sm:w-5" />
-            </div>
+            {siteLogoUrl ? (
+              <img
+                src={siteLogoUrl}
+                alt="Logo"
+                className="h-8 w-8 sm:h-9 sm:w-9 rounded-md object-cover border shadow-sm"
+              />
+            ) : (
+              <div className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-md bg-primary text-primary-foreground">
+                <Cpu className="h-4 w-4 sm:h-5 sm:w-5" />
+              </div>
+            )}
             <span className="text-base sm:text-lg font-bold tracking-tight truncate">
-              Nexus<span className="text-primary">IoT</span>
+              {siteName}
             </span>
           </Link>
 

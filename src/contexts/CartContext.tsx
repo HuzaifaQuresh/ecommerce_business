@@ -55,7 +55,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (ex) return prev.map((p) => (p.id === item.id ? { ...p, quantity: p.quantity + qty } : p));
       return [...prev, { ...item, quantity: qty }];
     });
-    setDrawerOpen(true);
   }, []);
 
   const remove = useCallback((id: string) => setItems((p) => p.filter((i) => i.id !== id)), []);

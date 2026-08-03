@@ -8,6 +8,7 @@ import { ProductCard, type Product } from "@/components/site/ProductCard";
 import { CATEGORIES } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import {
   Camera,
   Cpu,
@@ -240,6 +241,28 @@ const CHANNELS = [
 
 function Index() {
   const loaderData = Route.useLoaderData();
+  const { data: settings } = useSiteSettings();
+  const customHeroBanner = settings?.hero_banner
+    ? String(settings.hero_banner).replace(/"/g, "")
+    : "";
+  const dynamicBanners = [
+    ...(customHeroBanner
+      ? [
+          {
+            title: "FEATURED OFFER",
+            subtitle: settings?.site_name ? `${settings.site_name} EXCLUSIVE` : "STORE EXCLUSIVE",
+            heading: "Next-Gen IoT & Smart Hardware",
+            desc: "High-performance components and development kits with lightning-fast delivery across Pakistan.",
+            bg: "from-slate-900 via-slate-800 to-sky-950 text-white",
+            bgImage: customHeroBanner,
+            badge: "Admin Configured",
+            link: "/products",
+          },
+        ]
+      : []),
+    ...BANNERS,
+  ];
+
   // Query for all products
   const { data: products } = useQuery({
     queryKey: ["all-products"],
@@ -258,10 +281,10 @@ function Index() {
 
   useEffect(() => {
     const slideTimer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % BANNERS.length);
+      setCurrentSlide((prev) => (prev + 1) % dynamicBanners.length);
     }, 5000);
     return () => clearInterval(slideTimer);
-  }, []);
+  }, [dynamicBanners.length]);
 
   const list = products || MOCK_PRODUCTS;
 
@@ -328,7 +351,7 @@ function Index() {
           {/* Right Promotional Slider Banner */}
           <div className="lg:col-span-9 flex flex-col h-full">
             <div className="relative rounded-lg overflow-hidden border border-slate-200/50 shadow-sm aspect-[16/9] lg:aspect-auto h-full bg-slate-900 flex-1">
-              {BANNERS.map((banner, index) => {
+              {dynamicBanners.map((banner, index) => {
                 const isActive = index === currentSlide;
                 return (
                   <div

@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtPKR } from "@/lib/format";
@@ -32,6 +33,38 @@ function Dashboard() {
   const { isSuperAdmin: isSuper, roles } = useAuth();
   const variant = isSuper ? "super_admin" : "admin";
   const theme = DASHBOARD_THEME[variant];
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("public:orders_dashboard_realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "orders",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+          queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+          queryClient.invalidateQueries({ queryKey: ["orders"] });
+        },
+      )
+      .subscribe();
+
+    const handleOrdersUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    };
+    window.addEventListener("nexus-orders-update", handleOrdersUpdate);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener("nexus-orders-update", handleOrdersUpdate);
+    };
+  }, [queryClient]);
 
   const { data: stats } = useQuery({
     queryKey: ["admin-stats"],

@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { useCart } from "@/contexts/CartContext";
 import { fmtPKR } from "@/lib/format";
@@ -56,6 +57,7 @@ const schema = z.object({
 function Checkout() {
   const { items, subtotal, clear } = useCart();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { user } = useAuth();
   const { data: config, isLoading: configLoading } = useCheckoutConfig();
 
@@ -345,6 +347,8 @@ function Checkout() {
         image_url: i.image_url,
       }));
       clear();
+      qc.invalidateQueries({ queryKey: ["admin-orders"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
 
       if (paymentMethod === "card") {
         setPendingOrder({

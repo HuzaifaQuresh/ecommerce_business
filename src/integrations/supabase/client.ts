@@ -15,6 +15,17 @@ export function isSupabaseConfigured(): boolean {
   ) {
     return false;
   }
+  // The key must also look like a real anon/publishable key, not a leftover
+  // placeholder such as "your-anon-key" — otherwise we'd think Supabase is
+  // configured and silently use a bogus key for every request.
+  if (
+    key.includes("your-anon-key") ||
+    key.includes("your-publishable-key") ||
+    key.includes("placeholder") ||
+    key.length < 20
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -199,11 +210,63 @@ function getAllMockUsers(activeUser: any) {
 }
 
 function getMockTableData(table: string, activeUser: any) {
-  if (table === "products") return MOCK_PRODUCTS;
-  if (table === "vouchers") return MOCK_VOUCHERS;
-  if (table === "orders") return MOCK_ORDERS;
+  if (table === "products") {
+    const custom = isClient ? JSON.parse(localStorage.getItem("nexus_products") || "null") : null;
+    return custom || MOCK_PRODUCTS;
+  }
+  if (table === "vouchers") {
+    const custom = isClient ? JSON.parse(localStorage.getItem("nexus_vouchers") || "null") : null;
+    return custom || MOCK_VOUCHERS;
+  }
+  if (table === "orders") {
+    const custom = isClient
+      ? JSON.parse(
+          localStorage.getItem("nexus_orders") ||
+            localStorage.getItem("nexus_local_orders") ||
+            "null",
+        )
+      : null;
+    if (custom && Array.isArray(custom)) {
+      const merged = [...custom];
+      for (const mo of MOCK_ORDERS) {
+        if (!merged.some((o: any) => o.id === mo.id)) {
+          merged.push(mo);
+        }
+      }
+      return merged;
+    }
+    return MOCK_ORDERS;
+  }
+  if (table === "order_items") {
+    const custom = isClient
+      ? JSON.parse(localStorage.getItem("nexus_order_items") || "null")
+      : null;
+    if (custom && Array.isArray(custom)) return custom;
+    const orders = isClient
+      ? JSON.parse(
+          localStorage.getItem("nexus_orders") ||
+            localStorage.getItem("nexus_local_orders") ||
+            "[]",
+        )
+      : [];
+    const allItems: any[] = [];
+    for (const o of orders) {
+      if (o.items && Array.isArray(o.items)) {
+        allItems.push(...o.items);
+      }
+    }
+    const defaultItems = MOCK_ORDERS_WITH_ITEMS.flatMap((o) => o.items || []);
+    for (const di of defaultItems) {
+      if (!allItems.some((i: any) => i.id === di.id)) {
+        allItems.push(di);
+      }
+    }
+    return allItems;
+  }
   if (table === "site_settings") {
-    return Object.entries(MOCK_SITE_SETTINGS).map(([k, v]) => ({ key: k, value: v }));
+    const custom = isClient ? JSON.parse(localStorage.getItem("nexus_site_settings") || "{}") : {};
+    const merged = { ...MOCK_SITE_SETTINGS, ...custom };
+    return Object.entries(merged).map(([k, v]) => ({ key: k, value: v }));
   }
   if (table === "user_roles") {
     const allUsers = getAllMockUsers(activeUser);
@@ -237,15 +300,58 @@ function getMockTableData(table: string, activeUser: any) {
     if (!isClient) return [];
     return JSON.parse(localStorage.getItem("nexus_vendor_apps") || "[]");
   }
+  if (table === "product_reviews") {
+    if (!isClient) return [];
+    return JSON.parse(localStorage.getItem("nexus_all_reviews") || "[]");
+  }
   return [];
 }
 
-function createMockQueryBuilder(initialData: any) {
+function createMockQueryBuilder(initialData: any, table?: string) {
   let dataset = Array.isArray(initialData) ? [...initialData] : initialData;
+  const filters: { column: string; value: any }[] = [];
+
+  const applyFilters = (data: any[]) => {
+    let result = [...data];
+    for (const f of filters) {
+      result = result.filter((item: any) => {
+        if (!item || item[f.column] === undefined) return false;
+        return String(item[f.column]).toLowerCase() === String(f.value).toLowerCase();
+      });
+    }
+    return result;
+  };
+
+  const persistDataset = (updatedDataset: any[]) => {
+    if (!isClient || !table) return;
+    if (table === "site_settings") {
+      const map: Record<string, any> = {};
+      for (const row of updatedDataset) {
+        if (row && row.key) map[row.key] = row.value;
+      }
+      localStorage.setItem("nexus_site_settings", JSON.stringify(map));
+      window.dispatchEvent(new Event("nexus-settings-update"));
+    } else if (table === "vouchers") {
+      localStorage.setItem("nexus_vouchers", JSON.stringify(updatedDataset));
+      window.dispatchEvent(new Event("nexus-vouchers-update"));
+    } else if (table === "products") {
+      localStorage.setItem("nexus_products", JSON.stringify(updatedDataset));
+      window.dispatchEvent(new Event("nexus-products-update"));
+    } else if (table === "orders") {
+      localStorage.setItem("nexus_orders", JSON.stringify(updatedDataset));
+      localStorage.setItem("nexus_local_orders", JSON.stringify(updatedDataset));
+      window.dispatchEvent(new Event("nexus-orders-update"));
+    } else if (table === "order_items") {
+      localStorage.setItem("nexus_order_items", JSON.stringify(updatedDataset));
+    } else if (table === "product_reviews") {
+      localStorage.setItem("nexus_all_reviews", JSON.stringify(updatedDataset));
+    }
+  };
 
   const builder: any = {
     select: () => builder,
     eq: (column: string, value: any) => {
+      filters.push({ column, value });
       if (Array.isArray(dataset)) {
         dataset = dataset.filter((item: any) => {
           if (!item || item[column] === undefined) return false;
@@ -348,10 +454,84 @@ function createMockQueryBuilder(initialData: any) {
       }
       return builder;
     },
-    upsert: async () => ({ data: null, error: null }),
-    insert: async () => ({ data: null, error: null }),
-    update: async () => ({ data: null, error: null }),
-    delete: async () => ({ data: null, error: null }),
+    upsert: async (payload: any) => {
+      let baseData = getMockTableData(table || "", null);
+      if (!Array.isArray(baseData)) baseData = [];
+      const items = Array.isArray(payload) ? payload : [payload];
+      for (const item of items) {
+        if (table === "site_settings") {
+          const idx = baseData.findIndex((r: any) => r.key === item.key);
+          if (idx >= 0) {
+            baseData[idx] = { ...baseData[idx], ...item };
+          } else {
+            baseData.push(item);
+          }
+        } else {
+          const idx = baseData.findIndex((r: any) => r.id && item.id && r.id === item.id);
+          if (idx >= 0) {
+            baseData[idx] = { ...baseData[idx], ...item };
+          } else {
+            baseData.push({ id: "item-" + Math.random().toString(36).substring(2, 9), ...item });
+          }
+        }
+      }
+      persistDataset(baseData);
+      dataset = baseData;
+      return { data: null, error: null };
+    },
+    insert: async (payload: any) => {
+      let baseData = getMockTableData(table || "", null);
+      if (!Array.isArray(baseData)) baseData = [];
+      const items = Array.isArray(payload) ? payload : [payload];
+      const inserted = items.map((item) => ({
+        id: item.id || "item-" + Math.random().toString(36).substring(2, 9),
+        created_at: new Date().toISOString(),
+        ...item,
+      }));
+      baseData = [...inserted, ...baseData];
+      persistDataset(baseData);
+      dataset = baseData;
+      return { data: inserted, error: null };
+    },
+    update: async (payload: any) => {
+      let baseData = getMockTableData(table || "", null);
+      if (!Array.isArray(baseData)) baseData = [];
+
+      baseData = baseData.map((item: any) => {
+        let matches = true;
+        for (const f of filters) {
+          if (!item || String(item[f.column]).toLowerCase() !== String(f.value).toLowerCase()) {
+            matches = false;
+            break;
+          }
+        }
+        if (matches) {
+          return { ...item, ...payload, updated_at: new Date().toISOString() };
+        }
+        return item;
+      });
+
+      persistDataset(baseData);
+      dataset = applyFilters(baseData);
+      return { data: null, error: null };
+    },
+    delete: async () => {
+      let baseData = getMockTableData(table || "", null);
+      if (!Array.isArray(baseData)) baseData = [];
+
+      baseData = baseData.filter((item: any) => {
+        for (const f of filters) {
+          if (item && String(item[f.column]).toLowerCase() === String(f.value).toLowerCase()) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      persistDataset(baseData);
+      dataset = applyFilters(baseData);
+      return { data: null, error: null };
+    },
     maybeSingle: async () => ({
       data: Array.isArray(dataset) ? (dataset[0] ?? null) : dataset,
       error: null,
@@ -487,6 +667,31 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
         signInWithPassword: async ({ email, password }: { email: string; password?: string }) => {
           const em = (email || "").trim().toLowerCase();
           const pw = password || "";
+
+          // When Supabase is properly configured, always authenticate for
+          // real instead of using the local demo fallback — otherwise any
+          // password would silently "work" for emails that happen to match
+          // a demo account.
+          if (configured) {
+            try {
+              const res = await originalAuth.signInWithPassword({ email: em, password: pw });
+              if (res.error && res.error.message.toLowerCase().includes("failed to fetch")) {
+                return {
+                  data: { user: null, session: null },
+                  error: new Error(
+                    "Could not reach Supabase. Check your internet connection and Supabase project status.",
+                  ),
+                };
+              }
+              return res;
+            } catch (err: any) {
+              return {
+                data: { user: null, session: null },
+                error: new Error(err?.message || "Invalid login credentials"),
+              };
+            }
+          }
+
           const accounts = getRegisteredAccounts();
           let found = accounts.find((a) => a.email.toLowerCase() === em);
 
@@ -682,48 +887,17 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
         },
         signInWithOAuth: async ({ provider, options }: any) => {
           if (configured) {
+            // Real Supabase project: let the real OAuth flow run and report
+            // real errors (e.g. the Google provider not being enabled in the
+            // Supabase dashboard, or the redirect URL not being whitelisted)
+            // instead of masking them with a fake local session.
             try {
-              const res = await originalAuth.signInWithOAuth({ provider, options });
-              if (res.error) {
-                console.warn(
-                  "Supabase OAuth error, falling back to local Google session:",
-                  res.error.message,
-                );
-                if (isClient) {
-                  const googleUser = {
-                    id: "usr-google-" + Math.random().toString(36).substring(2, 9),
-                    email: "google_user@nexus.pk",
-                    full_name: "Google User",
-                    role: "user",
-                  };
-                  localStorage.setItem("nexus_local_user", JSON.stringify(googleUser));
-                  window.dispatchEvent(new Event("nexus-auth-update"));
-
-                  const redirectTo = options?.redirectTo || window.location.origin + "/account";
-                  window.location.href = redirectTo;
-                }
-                return { data: { provider, url: "" }, error: null };
-              }
-              return res;
+              return await originalAuth.signInWithOAuth({ provider, options });
             } catch (err: any) {
-              console.warn(
-                "Supabase OAuth exception, falling back to local Google session:",
-                err?.message,
-              );
-              if (isClient) {
-                const googleUser = {
-                  id: "usr-google-" + Math.random().toString(36).substring(2, 9),
-                  email: "google_user@nexus.pk",
-                  full_name: "Google User",
-                  role: "user",
-                };
-                localStorage.setItem("nexus_local_user", JSON.stringify(googleUser));
-                window.dispatchEvent(new Event("nexus-auth-update"));
-
-                const redirectTo = options?.redirectTo || window.location.origin + "/account";
-                window.location.href = redirectTo;
-              }
-              return { data: { provider, url: "" }, error: null };
+              return {
+                data: { provider, url: "" },
+                error: new Error(err?.message || "Failed to sign in with Google"),
+              };
             }
           }
           if (isClient) {
@@ -747,12 +921,10 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
     }
 
     if (prop === "from") {
-      if (!configured || activeUser) {
-        return (table: string) => {
-          const tableData = getMockTableData(table, activeUser);
-          return createMockQueryBuilder(tableData);
-        };
-      }
+      return (table: string) => {
+        const tableData = getMockTableData(table, activeUser);
+        return createMockQueryBuilder(tableData, table);
+      };
     }
 
     if (prop === "rpc") {

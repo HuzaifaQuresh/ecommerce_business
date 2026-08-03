@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchOrders } from "@/api/orders";
+import { supabase } from "@/integrations/supabase/client";
 import { fmtPKR } from "@/lib/format";
 import { formatDeliveryDate } from "@/lib/order-fulfillment";
 import { DashboardPageHeader, ResponsiveScroll } from "@/components/site/PageLayout";
@@ -27,6 +28,36 @@ const ALL_STATUSES = ["pending", "processing", "shipped", "delivered", "cancelle
 function Orders() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("public:orders_admin_realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "orders",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+          queryClient.invalidateQueries({ queryKey: ["orders"] });
+        },
+      )
+      .subscribe();
+
+    const handleOrdersUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    };
+    window.addEventListener("nexus-orders-update", handleOrdersUpdate);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener("nexus-orders-update", handleOrdersUpdate);
+    };
+  }, [queryClient]);
 
   const { data } = useQuery({
     queryKey: ["admin-orders"],
@@ -39,6 +70,8 @@ function Orders() {
       }
       return MOCK_ORDERS;
     },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const filtered = useMemo(() => {

@@ -43,10 +43,15 @@ function AdminSettings() {
       contact_email: String(settings?.contact_email ?? "").replace(/"/g, ""),
       contact_phone: String(settings?.contact_phone ?? "").replace(/"/g, ""),
       tax_rate_pct: String(checkout?.tax_rate_pct ?? settings?.tax_rate_pct ?? 17),
-      tax_label: checkout?.tax_label ?? "Sales Tax (GST)",
+      tax_label: String(checkout?.tax_label ?? settings?.tax_label ?? "Sales Tax (GST)").replace(
+        /"/g,
+        "",
+      ),
       free_shipping_min_pkr: String(checkout?.free_shipping_min_pkr ?? 15000),
       cod_handling_fee_pkr: String(checkout?.cod_handling_fee_pkr ?? 0),
     });
+    if (settings?.site_logo) setSiteLogo(String(settings.site_logo).replace(/"/g, ""));
+    if (settings?.hero_banner) setHeroBanner(String(settings.hero_banner).replace(/"/g, ""));
     if (checkout?.payment_methods) setPayments(checkout.payment_methods);
     if (checkout?.delivery_methods) setDelivery(checkout.delivery_methods);
   }, [settings, checkout]);
@@ -60,9 +65,11 @@ function AdminSettings() {
       await updateSiteSetting("tax_label", JSON.stringify(meta.tax_label));
       await updateSiteSetting("free_shipping_min_pkr", meta.free_shipping_min_pkr);
       await updateSiteSetting("cod_handling_fee_pkr", meta.cod_handling_fee_pkr);
-      toast.success("Checkout & tax settings saved");
-      qc.invalidateQueries({ queryKey: ["site-settings"] });
-      qc.invalidateQueries({ queryKey: ["checkout-config"] });
+      if (siteLogo) await updateSiteSetting("site_logo", JSON.stringify(siteLogo));
+      if (heroBanner) await updateSiteSetting("hero_banner", JSON.stringify(heroBanner));
+      toast.success("Site & checkout settings saved successfully");
+      await qc.refetchQueries({ queryKey: ["site-settings"] });
+      await qc.refetchQueries({ queryKey: ["checkout-config"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed");
     }
@@ -71,9 +78,10 @@ function AdminSettings() {
   const savePayments = async () => {
     try {
       await updateSiteSetting("payment_methods", payments);
-      toast.success("Payment methods updated");
-      qc.invalidateQueries({ queryKey: ["payment-methods"] });
-      qc.invalidateQueries({ queryKey: ["checkout-config"] });
+      toast.success("Payment methods updated successfully");
+      await qc.refetchQueries({ queryKey: ["payment-methods"] });
+      await qc.refetchQueries({ queryKey: ["checkout-config"] });
+      await qc.refetchQueries({ queryKey: ["site-settings"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Update failed");
     }
@@ -82,8 +90,9 @@ function AdminSettings() {
   const saveDelivery = async () => {
     try {
       await updateSiteSetting("delivery_methods", delivery);
-      toast.success("Delivery options updated");
-      qc.invalidateQueries({ queryKey: ["checkout-config"] });
+      toast.success("Delivery options updated successfully");
+      await qc.refetchQueries({ queryKey: ["checkout-config"] });
+      await qc.refetchQueries({ queryKey: ["site-settings"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Update failed");
     }
