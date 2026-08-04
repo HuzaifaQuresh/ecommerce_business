@@ -120,63 +120,113 @@ function Orders() {
         </Select>
       </div>
 
-      <ResponsiveScroll>
-        <table className="w-full text-sm min-w-[900px]">
-          <thead className="bg-muted/60 text-left">
-            <tr>
-              <th className="p-3 font-semibold">Order</th>
-              <th className="p-3 font-semibold">Customer</th>
-              <th className="p-3 font-semibold">Ship to</th>
-              <th className="p-3 font-semibold">Est. delivery</th>
-              <th className="p-3 font-semibold">Total</th>
-              <th className="p-3 font-semibold">Status</th>
-              <th className="p-3 font-semibold"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((o) => (
-              <tr key={o.id} className="border-t hover:bg-muted/20 transition-colors">
-                <td className="p-3 font-mono text-xs">{o.id.slice(0, 8).toUpperCase()}</td>
-                <td className="p-3">
-                  <div className="font-medium">{o.customer_name}</div>
-                  <div className="text-xs text-muted-foreground">{o.phone}</div>
-                </td>
-                <td className="p-3 text-xs max-w-[200px]">
-                  <div className="line-clamp-2">{o.address}</div>
-                  <div className="text-muted-foreground">
-                    {o.city}
-                    {(o as any).province ? `, ${(o as any).province}` : ""}
-                  </div>
-                </td>
-                <td className="p-3 text-xs whitespace-nowrap">
-                  {formatDeliveryDate((o as any).expected_delivery_at, (o as any).delivery_method)}
-                </td>
-                <td className="p-3 font-semibold tabular-nums">{fmtPKR(Number(o.total_pkr))}</td>
-                <td className="p-3">
-                  <OrderStatusBadge status={o.status} />
-                </td>
-                <td className="p-3">
-                  <Button asChild variant="outline" size="sm">
-                    <Link to="/admin/orders/$orderId" params={{ orderId: o.id }}>
-                      <Eye className="h-3.5 w-3.5 mr-1" />
-                      Details
-                    </Link>
-                  </Button>
-                </td>
-              </tr>
-            ))}
-            {!filtered.length && (
+      {/* Mobile Card List */}
+      <div className="block md:hidden space-y-4">
+        {filtered.map((o) => (
+          <div key={o.id} className="bg-card border rounded-xl p-4 shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-xs font-semibold text-muted-foreground">
+                #{o.id.slice(0, 8).toUpperCase()}
+              </span>
+              <OrderStatusBadge status={o.status} />
+            </div>
+            <div>
+              <div className="font-medium text-foreground">{o.customer_name}</div>
+              <div className="text-xs text-muted-foreground">{o.phone}</div>
+            </div>
+            <div className="text-xs text-muted-foreground border-t pt-2 space-y-1">
+              <div>
+                <span className="font-medium text-foreground">Ship to:</span> {o.address}, {o.city}
+              </div>
+              <div>
+                <span className="font-medium text-foreground">Est. Delivery:</span>{" "}
+                {formatDeliveryDate((o as any).expected_delivery_at, (o as any).delivery_method)}
+              </div>
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t">
+              <div>
+                <span className="text-xs text-muted-foreground">Total:</span>{" "}
+                <span className="font-semibold text-foreground">{fmtPKR(Number(o.total_pkr))}</span>
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/admin/orders/$orderId" params={{ orderId: o.id }}>
+                  <Eye className="h-3.5 w-3.5 mr-1" />
+                  Details
+                </Link>
+              </Button>
+            </div>
+          </div>
+        ))}
+        {!filtered.length && (
+          <div className="p-10 text-center text-muted-foreground bg-card border rounded-xl">
+            {search || filterStatus !== "all" ? "No orders match your filters." : "No orders yet."}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden md:block">
+        <ResponsiveScroll>
+          <table className="w-full text-sm min-w-[900px]">
+            <thead className="bg-muted/60 text-left">
               <tr>
-                <td colSpan={7} className="p-10 text-center text-muted-foreground">
-                  {search || filterStatus !== "all"
-                    ? "No orders match your filters."
-                    : "No orders yet."}
-                </td>
+                <th className="p-3 font-semibold">Order</th>
+                <th className="p-3 font-semibold">Customer</th>
+                <th className="p-3 font-semibold">Ship to</th>
+                <th className="p-3 font-semibold">Est. delivery</th>
+                <th className="p-3 font-semibold">Total</th>
+                <th className="p-3 font-semibold">Status</th>
+                <th className="p-3 font-semibold"></th>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </ResponsiveScroll>
+            </thead>
+            <tbody>
+              {filtered.map((o) => (
+                <tr key={o.id} className="border-t hover:bg-muted/20 transition-colors">
+                  <td className="p-3 font-mono text-xs">{o.id.slice(0, 8).toUpperCase()}</td>
+                  <td className="p-3">
+                    <div className="font-medium">{o.customer_name}</div>
+                    <div className="text-xs text-muted-foreground">{o.phone}</div>
+                  </td>
+                  <td className="p-3 text-xs max-w-[200px]">
+                    <div className="line-clamp-2">{o.address}</div>
+                    <div className="text-muted-foreground">
+                      {o.city}
+                      {(o as any).province ? `, ${(o as any).province}` : ""}
+                    </div>
+                  </td>
+                  <td className="p-3 text-xs whitespace-nowrap">
+                    {formatDeliveryDate(
+                      (o as any).expected_delivery_at,
+                      (o as any).delivery_method,
+                    )}
+                  </td>
+                  <td className="p-3 font-semibold tabular-nums">{fmtPKR(Number(o.total_pkr))}</td>
+                  <td className="p-3">
+                    <OrderStatusBadge status={o.status} />
+                  </td>
+                  <td className="p-3">
+                    <Button asChild variant="outline" size="sm">
+                      <Link to="/admin/orders/$orderId" params={{ orderId: o.id }}>
+                        <Eye className="h-3.5 w-3.5 mr-1" />
+                        Details
+                      </Link>
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {!filtered.length && (
+                <tr>
+                  <td colSpan={7} className="p-10 text-center text-muted-foreground">
+                    {search || filterStatus !== "all"
+                      ? "No orders match your filters."
+                      : "No orders yet."}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </ResponsiveScroll>
+      </div>
 
       <p className="text-xs text-muted-foreground">
         Showing {filtered.length} of {data?.length ?? 0} orders.

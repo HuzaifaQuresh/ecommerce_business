@@ -296,6 +296,24 @@ function getMockTableData(table: string, activeUser: any) {
       updated_at: new Date().toISOString(),
     }));
   }
+  if (table === "audit_logs") {
+    if (!isClient) return [];
+    const custom = JSON.parse(localStorage.getItem("nexus_audit_logs") || "null");
+    if (custom && Array.isArray(custom)) return custom;
+    return [
+      {
+        id: "log-1",
+        actor_role: "super_admin",
+        action: "ORDER_STATUS_CHANGE",
+        entity_type: "order",
+        entity_id: "order-mock-1",
+        old_status: "pending",
+        new_status: "processing",
+        details: { order_number: "NEXUS-1001", total_pkr: 15500 },
+        created_at: new Date().toISOString(),
+      },
+    ];
+  }
   if (table === "vendor_applications") {
     if (!isClient) return [];
     return JSON.parse(localStorage.getItem("nexus_vendor_apps") || "[]");

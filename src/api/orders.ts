@@ -292,8 +292,23 @@ export async function updateOrderStatus(id: string, status: OrderStatus) {
   const localList = getLocalOrders();
   const idx = localList.findIndex((o) => o.id === id);
   if (idx !== -1) {
+    const oldStatus = localList[idx].status;
     localList[idx].status = status;
     localStorage.setItem("nexus_local_orders", JSON.stringify(localList));
+
+    const existingLogs = JSON.parse(localStorage.getItem("nexus_audit_logs") || "[]");
+    const newLog = {
+      id: "log-" + Date.now(),
+      actor_role: "admin",
+      action: "ORDER_STATUS_CHANGE",
+      entity_type: "order",
+      entity_id: id,
+      old_status: oldStatus,
+      new_status: status,
+      details: { order_id: id, total_pkr: localList[idx].total_pkr },
+      created_at: new Date().toISOString(),
+    };
+    localStorage.setItem("nexus_audit_logs", JSON.stringify([newLog, ...existingLogs]));
     return;
   }
 
