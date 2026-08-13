@@ -314,6 +314,10 @@ function getMockTableData(table: string, activeUser: any) {
       },
     ];
   }
+  if (table === "import_logs") {
+    if (!isClient) return [];
+    return JSON.parse(localStorage.getItem("nexus_import_logs") || "[]");
+  }
   if (table === "vendor_applications") {
     if (!isClient) return [];
     return JSON.parse(localStorage.getItem("nexus_vendor_apps") || "[]");

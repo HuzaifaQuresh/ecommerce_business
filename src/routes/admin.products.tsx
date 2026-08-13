@@ -43,6 +43,7 @@ import {
   TechSpecItem,
   TechnicalSpecsData,
 } from "@/components/product/TechnicalSpecsEditor";
+import { ProductImportModal } from "@/components/admin/ProductImportModal";
 
 export const Route = createFileRoute("/admin/products")({ component: AdminProducts });
 
@@ -312,196 +313,208 @@ function AdminProducts() {
         title="Products"
         description={`${data?.length ?? 0} total SKUs in catalog.`}
         actions={
-          <Dialog
-            open={open}
-            onOpenChange={(v) => {
-              setOpen(v);
-              if (!v) setForm(EMPTY);
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button className="min-h-[44px]">
-                <Plus className="h-4 w-4 mr-1" /> Add product
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{form.id ? "Edit" : "Add"} product</DialogTitle>
-              </DialogHeader>
+          <div className="flex flex-wrap items-center gap-2">
+            <ProductImportModal
+              onImportComplete={() => {
+                qc.invalidateQueries({ queryKey: ["admin-products"] });
+                qc.invalidateQueries({ queryKey: ["vendor-products"] });
+                qc.invalidateQueries({ queryKey: ["products"] });
+                qc.invalidateQueries({ queryKey: ["all-products"] });
+              }}
+            />
+            <Dialog
+              open={open}
+              onOpenChange={(v) => {
+                setOpen(v);
+                if (!v) setForm(EMPTY);
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button className="min-h-[44px]">
+                  <Plus className="h-4 w-4 mr-1" /> Add product
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{form.id ? "Edit" : "Add"} product</DialogTitle>
+                </DialogHeader>
 
-              {/* Image preview */}
-              {form.image_url && (
-                <div className="rounded-lg border overflow-hidden h-32 bg-muted flex items-center justify-center">
-                  <img
-                    src={form.image_url}
-                    alt=""
-                    className="h-full w-full object-contain"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                </div>
-              )}
+                {/* Image preview */}
+                {form.image_url && (
+                  <div className="rounded-lg border overflow-hidden h-32 bg-muted flex items-center justify-center">
+                    <img
+                      src={form.image_url}
+                      alt=""
+                      className="h-full w-full object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  </div>
+                )}
 
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div className="sm:col-span-2">
-                  <Label>Title *</Label>
-                  <Input
-                    value={form.title || ""}
-                    onChange={(e) => setForm({ ...form, title: e.target.value })}
-                    placeholder="Tuya Zigbee PIR Motion Sensor"
-                  />
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div className="sm:col-span-2">
+                    <Label>Title *</Label>
+                    <Input
+                      value={form.title || ""}
+                      onChange={(e) => setForm({ ...form, title: e.target.value })}
+                      placeholder="Tuya Zigbee PIR Motion Sensor"
+                    />
+                  </div>
+                  <div>
+                    <Label>Slug (auto-generated)</Label>
+                    <Input
+                      value={form.slug || ""}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
+                        })
+                      }
+                      placeholder="leave blank to auto-generate"
+                    />
+                  </div>
+                  <div>
+                    <Label>Manufacturer</Label>
+                    <Input
+                      value={form.manufacturer || ""}
+                      onChange={(e) => setForm({ ...form, manufacturer: e.target.value })}
+                      placeholder="Tuya, Hikvision…"
+                    />
+                  </div>
+                  <div>
+                    <Label>Category</Label>
+                    <Select
+                      value={form.category || "Components"}
+                      onValueChange={(v) => setForm({ ...form, category: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {CATEGORY_CATALOG.map((dept) => (
+                          <SelectGroup key={dept.name}>
+                            <SelectLabel>{dept.name}</SelectLabel>
+                            <SelectItem value={dept.name}>{dept.name} (all)</SelectItem>
+                            {(dept.children ?? []).map((sub) => (
+                              <SelectItem key={sub} value={sub}>
+                                {sub}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Availability</Label>
+                    <Select
+                      value={form.availability || "in_stock"}
+                      onValueChange={(v) => setForm({ ...form, availability: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="in_stock">In Stock</SelectItem>
+                        <SelectItem value="on_demand">On Demand</SelectItem>
+                        <SelectItem value="coming_soon">Coming Soon</SelectItem>
+                        <SelectItem value="obsolete">Obsolete</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Price (PKR) *</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 2500"
+                      value={form.price_pkr}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setForm({ ...form, price_pkr: v === "" ? "" : Number(v) });
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label>Stock qty</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 50"
+                      value={form.stock}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setForm({ ...form, stock: v === "" ? "" : Number(v) });
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label>Discount %</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      placeholder="e.g. 10"
+                      value={form.discount_pct}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setForm({ ...form, discount_pct: v === "" ? "" : Number(v) });
+                      }}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <MultiImageOptimizerUploader
+                      primaryImage={form.image_url || ""}
+                      onPrimaryImageChange={(url) =>
+                        setForm((prev) => ({ ...prev, image_url: url }))
+                      }
+                      galleryImages={form.gallery_urls || []}
+                      onGalleryImagesChange={(urls) =>
+                        setForm((prev) => ({ ...prev, gallery_urls: urls }))
+                      }
+                      label="Product Images & Multi-Angle Gallery"
+                      description="Upload & compress multiple product photos to WebP format or provide CDN URLs."
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label>Description</Label>
+                    <Textarea
+                      value={form.description || ""}
+                      onChange={(e) => setForm({ ...form, description: e.target.value })}
+                      rows={3}
+                      placeholder="Product description…"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <TechnicalSpecsEditor
+                      value={{
+                        protocol: form.protocol,
+                        power: form.power,
+                        ecosystem: form.ecosystem,
+                        tags: form.tags,
+                        customSpecs: form.customSpecs,
+                      }}
+                      onChange={(ts) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          protocol: ts.protocol,
+                          power: ts.power,
+                          ecosystem: ts.ecosystem,
+                          tags: ts.tags,
+                          customSpecs: ts.customSpecs,
+                        }))
+                      }
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label>Slug (auto-generated)</Label>
-                  <Input
-                    value={form.slug || ""}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
-                      })
-                    }
-                    placeholder="leave blank to auto-generate"
-                  />
-                </div>
-                <div>
-                  <Label>Manufacturer</Label>
-                  <Input
-                    value={form.manufacturer || ""}
-                    onChange={(e) => setForm({ ...form, manufacturer: e.target.value })}
-                    placeholder="Tuya, Hikvision…"
-                  />
-                </div>
-                <div>
-                  <Label>Category</Label>
-                  <Select
-                    value={form.category || "Components"}
-                    onValueChange={(v) => setForm({ ...form, category: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      {CATEGORY_CATALOG.map((dept) => (
-                        <SelectGroup key={dept.name}>
-                          <SelectLabel>{dept.name}</SelectLabel>
-                          <SelectItem value={dept.name}>{dept.name} (all)</SelectItem>
-                          {(dept.children ?? []).map((sub) => (
-                            <SelectItem key={sub} value={sub}>
-                              {sub}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Availability</Label>
-                  <Select
-                    value={form.availability || "in_stock"}
-                    onValueChange={(v) => setForm({ ...form, availability: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="in_stock">In Stock</SelectItem>
-                      <SelectItem value="on_demand">On Demand</SelectItem>
-                      <SelectItem value="coming_soon">Coming Soon</SelectItem>
-                      <SelectItem value="obsolete">Obsolete</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Price (PKR) *</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    placeholder="e.g. 2500"
-                    value={form.price_pkr}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setForm({ ...form, price_pkr: v === "" ? "" : Number(v) });
-                    }}
-                  />
-                </div>
-                <div>
-                  <Label>Stock qty</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    placeholder="e.g. 50"
-                    value={form.stock}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setForm({ ...form, stock: v === "" ? "" : Number(v) });
-                    }}
-                  />
-                </div>
-                <div>
-                  <Label>Discount %</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    placeholder="e.g. 10"
-                    value={form.discount_pct}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setForm({ ...form, discount_pct: v === "" ? "" : Number(v) });
-                    }}
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <MultiImageOptimizerUploader
-                    primaryImage={form.image_url || ""}
-                    onPrimaryImageChange={(url) => setForm((prev) => ({ ...prev, image_url: url }))}
-                    galleryImages={form.gallery_urls || []}
-                    onGalleryImagesChange={(urls) =>
-                      setForm((prev) => ({ ...prev, gallery_urls: urls }))
-                    }
-                    label="Product Images & Multi-Angle Gallery"
-                    description="Upload & compress multiple product photos to WebP format or provide CDN URLs."
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <Label>Description</Label>
-                  <Textarea
-                    value={form.description || ""}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    rows={3}
-                    placeholder="Product description…"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <TechnicalSpecsEditor
-                    value={{
-                      protocol: form.protocol,
-                      power: form.power,
-                      ecosystem: form.ecosystem,
-                      tags: form.tags,
-                      customSpecs: form.customSpecs,
-                    }}
-                    onChange={(ts) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        protocol: ts.protocol,
-                        power: ts.power,
-                        ecosystem: ts.ecosystem,
-                        tags: ts.tags,
-                        customSpecs: ts.customSpecs,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-              <Button onClick={save} className="w-full min-h-[44px]">
-                {form.id ? "Save changes" : "Create product"}
-              </Button>
-            </DialogContent>
-          </Dialog>
+                <Button onClick={save} className="w-full min-h-[44px]">
+                  {form.id ? "Save changes" : "Create product"}
+                </Button>
+              </DialogContent>
+            </Dialog>
+          </div>
         }
       />
 

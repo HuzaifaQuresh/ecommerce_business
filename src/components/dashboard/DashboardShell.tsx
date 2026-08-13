@@ -218,7 +218,7 @@ export function DashboardShell({
 
       <aside
         className={cn(
-          "hidden lg:flex flex-col p-5 sticky top-0 h-screen shrink-0",
+          "hidden lg:flex flex-col sticky top-0 h-screen shrink-0 overflow-y-auto p-5",
           theme.sidebarClass,
         )}
       >
