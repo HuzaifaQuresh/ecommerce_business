@@ -1,7 +1,10 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "tanstack-start-app",
-  "compatibility_date": "2025-09-24",
+  "name": "ecommerce-business",
+  "compatibility_date": "2026-09-06",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "src/server.ts",
+  "main": "@tanstack/react-start/server-entry",
+  "observability": {
+    "enabled": true
+  }
 }
