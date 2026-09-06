@@ -1,0 +1,276 @@
+interface SmartZoneEmblemProps {
+  className?: string;
+}
+
+export function SmartZoneEmblem({ className = "w-full h-full" }: SmartZoneEmblemProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 500 500"
+      className={className}
+      fill="none"
+      aria-label="SmartZone Logo Emblem"
+    >
+      <defs>
+        {/* Outer Shield Gradient: Cyan at top-right to Deep Royal Blue at bottom-left */}
+        <linearGradient
+          id="emblemShieldGrad"
+          x1="420"
+          y1="90"
+          x2="80"
+          y2="440"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0%" stopColor="#00E5FF" />
+          <stop offset="35%" stopColor="#00A8FF" />
+          <stop offset="70%" stopColor="#0066E0" />
+          <stop offset="100%" stopColor="#003FA8" />
+        </linearGradient>
+
+        {/* Inner Shield Accent Line */}
+        <linearGradient
+          id="emblemInnerShieldGrad"
+          x1="400"
+          y1="110"
+          x2="100"
+          y2="390"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.9" />
+          <stop offset="50%" stopColor="#0284C7" stopOpacity="0.6" />
+          <stop offset="100%" stopColor="#0369A1" stopOpacity="0.3" />
+        </linearGradient>
+
+        {/* Shopping Cart Frame & Chassis */}
+        <linearGradient
+          id="emblemCartGrad"
+          x1="20"
+          y1="180"
+          x2="380"
+          y2="400"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0%" stopColor="#0077F2" />
+          <stop offset="50%" stopColor="#0055D4" />
+          <stop offset="100%" stopColor="#00359E" />
+        </linearGradient>
+
+        {/* 3D S Ribbon Body */}
+        <linearGradient
+          id="emblemSRibbonGrad"
+          x1="140"
+          y1="140"
+          x2="280"
+          y2="340"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0%" stopColor="#00F0FF" />
+          <stop offset="35%" stopColor="#00A6FF" />
+          <stop offset="75%" stopColor="#0058D6" />
+          <stop offset="100%" stopColor="#003299" />
+        </linearGradient>
+
+        {/* Orange Arrow Gradient */}
+        <linearGradient
+          id="emblemOrangeArrowGrad"
+          x1="220"
+          y1="200"
+          x2="315"
+          y2="100"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0%" stopColor="#FF4900" />
+          <stop offset="50%" stopColor="#FF6B00" />
+          <stop offset="100%" stopColor="#FFAA00" />
+        </linearGradient>
+
+        {/* Orange Diamond Accent Gradient */}
+        <linearGradient
+          id="emblemOrangeDiamondGrad"
+          x1="145"
+          y1="270"
+          x2="190"
+          y2="230"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0%" stopColor="#FF4900" />
+          <stop offset="100%" stopColor="#FF8500" />
+        </linearGradient>
+
+        {/* Z Stem Gradient */}
+        <linearGradient
+          id="emblemZStemGrad"
+          x1="280"
+          y1="140"
+          x2="390"
+          y2="290"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0%" stopColor="#00F0FF" />
+          <stop offset="45%" stopColor="#00A0FF" />
+          <stop offset="100%" stopColor="#0058D6" />
+        </linearGradient>
+
+        {/* Blue Arrow Inside Z */}
+        <linearGradient
+          id="emblemZBlueArrowGrad"
+          x1="330"
+          y1="270"
+          x2="395"
+          y2="200"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0%" stopColor="#0050CC" />
+          <stop offset="50%" stopColor="#0088FF" />
+          <stop offset="100%" stopColor="#00E5FF" />
+        </linearGradient>
+
+        {/* Solid Orange Base Bar of Z */}
+        <linearGradient
+          id="emblemZOrangeBaseGrad"
+          x1="260"
+          y1="315"
+          x2="390"
+          y2="315"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0%" stopColor="#FF4900" />
+          <stop offset="60%" stopColor="#FF7500" />
+          <stop offset="100%" stopColor="#FFA500" />
+        </linearGradient>
+
+        {/* Right Orange Wheel */}
+        <linearGradient
+          id="emblemOrangeWheelGrad"
+          x1="310"
+          y1="400"
+          x2="365"
+          y2="455"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0%" stopColor="#FFA800" />
+          <stop offset="50%" stopColor="#FF6B00" />
+          <stop offset="100%" stopColor="#E63E00" />
+        </linearGradient>
+
+        {/* Left Blue Wheel */}
+        <linearGradient
+          id="emblemBlueWheelGrad"
+          x1="170"
+          y1="405"
+          x2="225"
+          y2="455"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0%" stopColor="#007CF0" />
+          <stop offset="100%" stopColor="#003D9E" />
+        </linearGradient>
+      </defs>
+
+      {/* 1. OUTER SHIELD FRAME */}
+      <path
+        d="M 250 34 L 436 96 C 446 100 452 110 452 122 C 452 232 414 346 256 454 C 252 457 248 457 244 454 C 86 346 48 232 48 122 C 48 110 54 100 64 96 Z"
+        stroke="url(#emblemShieldGrad)"
+        strokeWidth="22"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        fill="none"
+      />
+
+      {/* Inner Shield Highlight Line */}
+      <path
+        d="M 250 60 L 418 114 C 422 208 386 306 250 410 C 114 306 78 208 82 114 Z"
+        stroke="url(#emblemInnerShieldGrad)"
+        strokeWidth="4.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        fill="none"
+      />
+
+      {/* 2. SHOPPING CART HANDLE & CHASSIS */}
+      {/* Handle Bar on Left extending outwards and sweeping down */}
+      <path
+        d="M 12 188 H 70 C 88 188 100 200 108 218 L 150 326 C 156 340 170 350 186 350 H 364"
+        stroke="url(#emblemCartGrad)"
+        strokeWidth="22"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+
+      {/* Bottom Chassis Rail with rounded loop */}
+      <path
+        d="M 138 348 C 134 378 152 396 182 396 H 378"
+        stroke="url(#emblemCartGrad)"
+        strokeWidth="20"
+        strokeLinecap="round"
+        fill="none"
+      />
+
+      {/* 3. WHEELS & CHEVRON */}
+      {/* Left Blue Wheel Ring */}
+      <circle cx="196" cy="432" r="26" fill="url(#emblemBlueWheelGrad)" />
+      <circle cx="196" cy="432" r="13" fill="#FFFFFF" />
+
+      {/* Right Orange Wheel Ring */}
+      <circle cx="338" cy="426" r="28" fill="url(#emblemOrangeWheelGrad)" />
+      <circle cx="338" cy="426" r="14" fill="#FFFFFF" />
+
+      {/* Bottom Shield Chevron Anchor Tip */}
+      <path
+        d="M 224 456 L 250 482 L 276 456"
+        stroke="#003FA8"
+        strokeWidth="15"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+
+      {/* 4. S MONOGRAM + ORANGE ACCENT + ORANGE ARROW */}
+      {/* Orange Diamond in crook of S */}
+      <polygon points="148,244 192,230 170,264 128,278" fill="url(#emblemOrangeDiamondGrad)" />
+
+      {/* 3D Ribbon S Body */}
+      <path
+        d="M 250 144 C 200 112 138 138 132 192 C 126 244 196 248 244 268 C 288 288 288 332 246 350 C 198 366 144 338 138 298"
+        stroke="url(#emblemSRibbonGrad)"
+        strokeWidth="34"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+
+      {/* Orange Arrow on S */}
+      <path
+        d="M 216 204 L 292 122"
+        stroke="url(#emblemOrangeArrowGrad)"
+        strokeWidth="22"
+        strokeLinecap="round"
+      />
+      <polygon points="270,90 326,100 316,156 296,138" fill="url(#emblemOrangeArrowGrad)" />
+
+      {/* 5. Z MONOGRAM + BLUE ARROW + ORANGE BASE */}
+      {/* Z Top Bar and Diagonal Stem */}
+      <path
+        d="M 284 140 H 390 L 276 300"
+        stroke="url(#emblemZStemGrad)"
+        strokeWidth="32"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+
+      {/* Blue Arrow Inside Z */}
+      <path
+        d="M 334 264 L 372 216"
+        stroke="url(#emblemZBlueArrowGrad)"
+        strokeWidth="18"
+        strokeLinecap="round"
+      />
+      <polygon points="356,192 402,204 390,248 376,228" fill="url(#emblemZBlueArrowGrad)" />
+
+      {/* Z Orange Base Quadrilateral */}
+      <polygon points="258,336 388,336 376,302 292,302" fill="url(#emblemZOrangeBaseGrad)" />
+    </svg>
+  );
+}

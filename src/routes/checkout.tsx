@@ -39,7 +39,7 @@ import { optimizeProductImageUrl } from "@/lib/product-image";
 import { StripePaymentWrapper } from "@/components/checkout/StripePaymentWrapper";
 
 export const Route = createFileRoute("/checkout")({
-  head: () => ({ meta: [{ title: "Checkout — NexusIoT" }] }),
+  head: () => ({ meta: [{ title: "Checkout — SmartZone Pakistan" }] }),
   component: Checkout,
 });
 
@@ -621,7 +621,11 @@ function Checkout() {
                 <Button variant="outline" onClick={() => setStep(2)} className="min-h-[44px]">
                   Back
                 </Button>
-                <Button onClick={submit} disabled={submitting} className="flex-1 min-h-[48px]">
+                <Button
+                  onClick={submit}
+                  disabled={submitting}
+                  className="flex-1 min-h-[48px] bg-[#FF7A00] hover:bg-[#E56E00] text-white font-bold shadow-md transition text-base"
+                >
                   {submitting
                     ? "Placing order…"
                     : paymentMethod === "card"

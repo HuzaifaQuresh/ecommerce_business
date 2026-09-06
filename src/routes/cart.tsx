@@ -9,7 +9,7 @@ import { PageContainer, PageHeader, EmptyState } from "@/components/site/PageLay
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 
 export const Route = createFileRoute("/cart")({
-  head: () => ({ meta: [{ title: "Your Cart — NexusIoT" }] }),
+  head: () => ({ meta: [{ title: "Your Cart — SmartZone Pakistan" }] }),
   component: CartPage,
 });
 
@@ -75,13 +75,11 @@ function CartPage() {
                 <Link
                   to="/products/$slug"
                   params={{ slug: i.slug }}
-                  className="font-medium hover:text-primary line-clamp-2"
+                  className="font-semibold text-[#0B192C] hover:text-[#0052B4] transition-colors line-clamp-2"
                 >
                   {i.title}
                 </Link>
-                <p className="text-primary font-semibold mt-1 tabular-nums">
-                  {fmtPKR(i.price_pkr)}
-                </p>
+                <p className="text-[#0B192C] font-bold mt-1 tabular-nums">{fmtPKR(i.price_pkr)}</p>
                 <div className="mt-auto pt-3 flex items-center justify-between gap-2">
                   <div className="inline-flex items-center border rounded-lg">
                     <button
@@ -114,7 +112,7 @@ function CartPage() {
               </div>
               <div className="flex sm:flex-col items-center justify-between sm:justify-start sm:text-right border-t sm:border-t-0 pt-3 sm:pt-0">
                 <span className="text-sm text-muted-foreground sm:hidden">Line total</span>
-                <span className="font-semibold text-lg tabular-nums">
+                <span className="font-bold text-lg tabular-nums text-[#0B192C]">
                   {fmtPKR(i.price_pkr * i.quantity)}
                 </span>
               </div>
@@ -125,11 +123,11 @@ function CartPage() {
           </Button>
         </div>
 
-        <aside className="order-1 lg:order-2 rounded-xl border bg-card p-5 h-fit space-y-3 lg:sticky lg:top-32 shadow-[var(--shadow-card)]">
-          <h3 className="font-semibold text-lg">Order Summary</h3>
+        <aside className="order-1 lg:order-2 rounded-xl border border-[#E2E8F0] bg-card p-5 h-fit space-y-3 lg:sticky lg:top-32 shadow-[var(--shadow-card)]">
+          <h3 className="font-bold text-lg text-[#0B192C]">Order Summary</h3>
           <div className="flex justify-between text-sm">
             <span>Subtotal</span>
-            <span className="tabular-nums">{fmtPKR(subtotal)}</span>
+            <span className="tabular-nums font-semibold text-[#0B192C]">{fmtPKR(subtotal)}</span>
           </div>
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>Est. delivery</span>
@@ -145,12 +143,16 @@ function CartPage() {
           )}
           <div className="border-t pt-3 flex justify-between font-bold text-lg">
             <span>Est. total</span>
-            <span className="text-primary tabular-nums">{fmtPKR(estimate.total)}</span>
+            <span className="text-[#0B192C] font-black tabular-nums">{fmtPKR(estimate.total)}</span>
           </div>
           <p className="text-[11px] text-muted-foreground">
             Final total at checkout includes payment method & vouchers.
           </p>
-          <Button asChild className="w-full min-h-[48px]" size="lg">
+          <Button
+            asChild
+            className="w-full min-h-[48px] bg-[#FF7A00] hover:bg-[#E56E00] text-white font-bold text-base shadow-sm transition"
+            size="lg"
+          >
             <Link to="/checkout">Proceed to Checkout</Link>
           </Button>
         </aside>

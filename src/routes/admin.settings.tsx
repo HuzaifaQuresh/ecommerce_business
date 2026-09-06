@@ -23,7 +23,7 @@ function AdminSettings() {
   });
 
   const [meta, setMeta] = useState({
-    site_name: "NexusIoT",
+    site_name: "SmartZone",
     contact_email: "",
     contact_phone: "",
     tax_rate_pct: "17",
@@ -39,7 +39,7 @@ function AdminSettings() {
   useEffect(() => {
     if (!settings && !checkout) return;
     setMeta({
-      site_name: String(settings?.site_name ?? "NexusIoT").replace(/"/g, ""),
+      site_name: String(settings?.site_name ?? "SmartZone").replace(/"/g, ""),
       contact_email: String(settings?.contact_email ?? "").replace(/"/g, ""),
       contact_phone: String(settings?.contact_phone ?? "").replace(/"/g, ""),
       tax_rate_pct: String(checkout?.tax_rate_pct ?? settings?.tax_rate_pct ?? 17),

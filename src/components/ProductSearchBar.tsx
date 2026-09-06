@@ -198,7 +198,10 @@ export function ProductSearchBar({
                     referrerPolicy="no-referrer"
                   />
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-semibold truncate text-foreground">
+                    <h4
+                      title={product.title}
+                      className="text-sm font-semibold truncate text-foreground"
+                    >
                       {product.title}
                     </h4>
                     <p className="text-xs text-muted-foreground truncate">

@@ -45,7 +45,7 @@ export function MobileStoreNav() {
                 <Icon className="h-5 w-5" />
                 {label}
                 {count > 0 && (
-                  <span className="absolute top-1 right-[calc(50%-1.25rem)] grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+                  <span className="absolute top-1 right-[calc(50%-1.25rem)] grid h-4 min-w-4 place-items-center rounded-full bg-[#FF7A00] px-1 text-[9px] font-bold text-white">
                     {count > 9 ? "9+" : count}
                   </span>
                 )}

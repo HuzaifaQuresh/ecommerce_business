@@ -1,5 +1,5 @@
 /**
- * NexusIoT product taxonomy — top-level departments and subcategories.
+ * SmartZone product taxonomy — top-level departments and subcategories.
  * Products may use either a top-level or leaf category string in `products.category`.
  */
 
@@ -10,12 +10,34 @@ export type CategoryNode = {
 
 export const CATEGORY_CATALOG: CategoryNode[] = [
   {
-    name: "3D Printers",
-    children: ["3D Printer", "Filaments", "Parts & Accessories", "3D Printing Services"],
+    name: "Development Boards",
+    children: [
+      "Artificial Intelligence Boards",
+      "Raspberry Pi",
+      "Rock 5B+",
+      "ESP32 / MCU Boards",
+      "Arduino Compatible",
+    ],
   },
   {
-    name: "Components",
+    name: "Engineering Services",
     children: [
+      "Industrial Automation",
+      "Programmable Logic Controller (PLC)",
+      "Human Machine Interface (HMI)",
+      "PLC Expansion Module",
+      "HVAC System",
+      "Electrical Parts",
+      "PCB Design",
+      "PCB Fabrication",
+      "PCB Assembly",
+    ],
+  },
+  {
+    name: "Accessories",
+    children: [
+      "Components",
+      "Sensors",
       "Antenna",
       "Battery",
       "Camera",
@@ -30,57 +52,6 @@ export const CATEGORY_CATALOG: CategoryNode[] = [
       "LCDs",
       "Light Emitting Diode (LED)",
       "Magnets",
-    ],
-  },
-  {
-    name: "Development Boards",
-    children: [
-      "Artificial Intelligence Boards",
-      "Raspberry Pi",
-      "Rock 5B+",
-      "ESP32 / MCU Boards",
-      "Arduino Compatible",
-    ],
-  },
-  {
-    name: "Engineering Services",
-    children: ["PCB Design", "PCB Fabrication", "PCB Assembly"],
-  },
-  {
-    name: "Industrial Automation",
-    children: [
-      "Programmable Logic Controller (PLC)",
-      "Human Machine Interface (HMI)",
-      "PLC Expansion Module",
-      "HVAC System",
-      "Electrical Parts",
-    ],
-  },
-  {
-    name: "PCB Assembly Line",
-    children: [
-      "PLC Assembly Line",
-      "HMI Assembly Line",
-      "PLC Expansion Module",
-      "HVAC System",
-      "Electrical Parts",
-    ],
-  },
-  {
-    name: "Phoenix Contact",
-    children: ["Redundancy Module", "Surge Protection Filters", "Relay Module"],
-  },
-  {
-    name: "Power Modules",
-    children: ["Inverters", "DC Power Supplies", "Buck / Boost Converters"],
-  },
-  {
-    name: "Robotics",
-    children: ["Motors", "Parts & Accessories", "Quadcopter Kits", "Robotic Kits"],
-  },
-  {
-    name: "Sensors",
-    children: [
       "Accelerometer / Gyroscope Sensors",
       "Biometric Sensors",
       "Current Sensors",
@@ -91,17 +62,61 @@ export const CATEGORY_CATALOG: CategoryNode[] = [
       "Pressure Sensors",
       "Other Sensors",
       "Tuya Sensors",
+      "Cables & Wires",
+      "Enclosures & Cases",
+      "Power Adapters",
+      "Connectors & Terminals",
+      "Mounting Hardware",
     ],
   },
   {
-    name: "Smart Home",
+    name: "Camera Solutions",
     children: [
-      "Thermostat",
-      "Artificial Assistant",
-      "Smart Switch",
-      "Smart Cameras",
-      "Smart Lighting",
+      "Smart Security Cameras",
+      "Smart Video Doorbells",
+      "AI Surveillance",
+      "AI Cameras",
+      "License Plate Recognition",
+      "Face Recognition",
+      "Intrusion Detection",
+      "Loitering Detection",
+      "Fire & Smoke Detection",
+      "AI Video Analytics",
+    ],
+  },
+  {
+    name: "IoT Solutions",
+    children: [
+      "Smart Home Automation",
+      "Smart Door Locks",
+      "Smart Control Panels",
+      "Smart Switches",
+      "Smart Sockets & Plugs",
+      "Smart Curtain Systems",
+      "Smart Thermostats",
+      "Smart Circuit Breakers",
       "Gateways",
+      "Tuya Smart Sensors",
+      "IoT Security Solutions",
+      "Smart Parking",
+      "IoT Sensors",
+      "ANPR Gate Control",
+      "Industrial Telemetry",
+      "Cloud Monitoring Gateways",
+    ],
+  },
+  {
+    name: "Robotics",
+    children: ["Motors", "Parts & Accessories", "Quadcopter Kits", "Robotic Kits"],
+  },
+  {
+    name: "PCB Assembly Line",
+    children: [
+      "PLC Assembly Line",
+      "HMI Assembly Line",
+      "PLC Expansion Module",
+      "HVAC System",
+      "Electrical Parts",
     ],
   },
   {
@@ -119,46 +134,66 @@ export const CATEGORY_CATALOG: CategoryNode[] = [
       "Trainer Boards",
     ],
   },
-  {
-    name: "Tools",
-    children: [
-      "Function Generators",
-      "Multimeters",
-      "Oscilloscopes",
-      "Power Supplies",
-      "PCB Drill Machines",
-      "Soldering Stations",
-      "Microscope",
-      "Debugger / Programmer",
-      "Other Tools",
-    ],
-  },
-  {
-    name: "Custom Boards",
-    children: [],
-  },
-  {
-    name: "Consumer Electronics",
-    children: [],
-  },
-  {
-    name: "Printers",
-    children: [],
-  },
-  {
-    name: "Personal Safety",
-    children: [],
-  },
-  {
-    name: "Motherboard",
-    children: [],
-  },
 ];
 
 /** Legacy DB category values → parent department for filtering */
 export const LEGACY_CATEGORY_PARENT: Record<string, string> = {
-  "Tuya Sensors": "Sensors",
-  Gateways: "Smart Home",
+  "3D Printer": "Accessories",
+  Filaments: "Accessories",
+  "3D Printing Services": "Accessories",
+  "Tuya Sensors": "IoT Solutions",
+  "Tuya Smart Sensors": "IoT Solutions",
+  "Smart Door Locks": "IoT Solutions",
+  "Smart Door Lock": "IoT Solutions",
+  "Smart Control Panels": "IoT Solutions",
+  "Smart Control Panel": "IoT Solutions",
+  "Smart Switches": "IoT Solutions",
+  "Smart Switch": "IoT Solutions",
+  "Smart Sockets & Plugs": "IoT Solutions",
+  "Smart Socket": "IoT Solutions",
+  "Smart Plugs": "IoT Solutions",
+  "Smart Curtain Systems": "IoT Solutions",
+  "Smart Curtain System": "IoT Solutions",
+  "Smart Thermostats": "IoT Solutions",
+  "Smart Thermostat": "IoT Solutions",
+  "Smart Circuit Breakers": "IoT Solutions",
+  "Circuit Breaker": "IoT Solutions",
+  "Smart Security Cameras": "Camera Solutions",
+  "Smart Cameras": "Camera Solutions",
+  "Smart Video Doorbells": "Camera Solutions",
+  "Smart Video Doorbell": "Camera Solutions",
+  Gateways: "IoT Solutions",
+  Components: "Accessories",
+  Sensors: "Accessories",
+  "Industrial Automation": "Engineering Services",
+  "Programmable Logic Controller (PLC)": "Engineering Services",
+  "Human Machine Interface (HMI)": "Engineering Services",
+  "PLC Expansion Module": "Engineering Services",
+  "HVAC System": "Engineering Services",
+  "Electrical Parts": "Engineering Services",
+  Antenna: "Accessories",
+  Battery: "Accessories",
+  Camera: "Accessories",
+  Capacitors: "Accessories",
+  Connectors: "Accessories",
+  Converters: "Accessories",
+  Diodes: "Accessories",
+  "Flow Control Valve": "Accessories",
+  "Heat Sink": "Accessories",
+  Inductors: "Accessories",
+  "Integrated Circuit": "Accessories",
+  LCDs: "Accessories",
+  "Light Emitting Diode (LED)": "Accessories",
+  Magnets: "Accessories",
+  "Accelerometer / Gyroscope Sensors": "Accessories",
+  "Biometric Sensors": "Accessories",
+  "Current Sensors": "Accessories",
+  "Environmental Sensors": "Accessories",
+  "Temperature Sensors": "Accessories",
+  "Level Sensors": "Accessories",
+  "Flow Sensors": "Accessories",
+  "Pressure Sensors": "Accessories",
+  "Other Sensors": "Accessories",
 };
 
 /** Top-level names (header chips, home grid) */
@@ -203,17 +238,9 @@ export function getCategoryFilterValues(filter: string): string[] {
   return [filter];
 }
 
-export function productMatchesCategory(productCategory: string, filter?: string): boolean {
-  if (!filter) return true;
-  if (productCategory === filter) return true;
-  if (getParentCategory(productCategory) === filter) return true;
-  if (LEGACY_CATEGORY_PARENT[productCategory] === filter) return true;
-  return false;
-}
-
-export function findCatalogNode(name: string): CategoryNode | undefined {
-  return (
-    CATEGORY_CATALOG.find((c) => c.name === name) ??
-    CATEGORY_CATALOG.find((c) => c.children?.includes(name))
-  );
+export function productMatchesCategory(productCat: string, filter: string): boolean {
+  if (!productCat) return false;
+  if (productCat === filter) return true;
+  const filterValues = getCategoryFilterValues(filter);
+  return filterValues.includes(productCat);
 }

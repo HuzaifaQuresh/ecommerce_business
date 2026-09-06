@@ -101,7 +101,7 @@ function VendorApplyPage() {
           <Store className="h-3.5 w-3.5" /> Become a Verified IoT Vendor
         </div>
         <h1 className="text-3xl font-extrabold tracking-tight">
-          Expand Your Hardware Store on NexusIoT
+          Expand Your Hardware Store on SmartZone
         </h1>
         <p className="text-muted-foreground text-sm max-w-xl mx-auto">
           {

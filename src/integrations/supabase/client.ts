@@ -60,25 +60,25 @@ export const DEFAULT_DEMO_ACCOUNTS = [
     role: "super_admin",
   },
   {
-    email: "superadmin@nexus.pk",
+    email: "superadmin@smartzone.pk",
     password: "password123",
     full_name: "Muhammad Huzaifa (Super Admin)",
     role: "super_admin",
   },
   {
-    email: "admin@nexus.pk",
+    email: "admin@smartzone.pk",
     password: "password123",
     full_name: "Sarah Khan (Platform Admin)",
     role: "admin",
   },
   {
-    email: "vendor@nexus.pk",
+    email: "vendor@smartzone.pk",
     password: "password123",
     full_name: "Ali Raza (IoT Vendor)",
     role: "vendor",
   },
   {
-    email: "user@nexus.pk",
+    email: "user@smartzone.pk",
     password: "password123",
     full_name: "Zainab Fatima (Customer)",
     role: "user",
@@ -120,7 +120,7 @@ function getActiveAuthUser() {
   if (demoRole) {
     return {
       id: "demo-user-id-1234-5678",
-      email: `${demoRole}@nexusiot.pk`,
+      email: `${demoRole}@smartzone.pk`,
       full_name:
         demoRole === "super_admin"
           ? "Muhammad Huzaifa (Super Admin)"
@@ -211,6 +211,12 @@ function getAllMockUsers(activeUser: any) {
 
 function getMockTableData(table: string, activeUser: any) {
   if (table === "products") {
+    if (isClient) {
+      const v = localStorage.getItem("smartzone_catalog_version");
+      if (v !== "smartzone_v3_full_tuya_catalog") {
+        localStorage.removeItem("nexus_products");
+      }
+    }
     const custom = isClient ? JSON.parse(localStorage.getItem("nexus_products") || "null") : null;
     return custom || MOCK_PRODUCTS;
   }
@@ -309,7 +315,7 @@ function getMockTableData(table: string, activeUser: any) {
         entity_id: "order-mock-1",
         old_status: "pending",
         new_status: "processing",
-        details: { order_number: "NEXUS-1001", total_pkr: 15500 },
+        details: { order_number: "SZ-1001", total_pkr: 15500 },
         created_at: new Date().toISOString(),
       },
     ];
@@ -925,7 +931,7 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
           if (isClient) {
             const googleUser = {
               id: "usr-google-" + Math.random().toString(36).substring(2, 9),
-              email: "google_user@nexus.pk",
+              email: "google_user@smartzone.pk",
               full_name: "Google User",
               role: "user",
             };

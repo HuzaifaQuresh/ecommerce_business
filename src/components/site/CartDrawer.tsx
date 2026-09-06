@@ -41,7 +41,7 @@ export function CartDrawer() {
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium line-clamp-2">{i.title}</p>
-                    <p className="text-sm text-primary font-semibold mt-1">{fmtPKR(i.price_pkr)}</p>
+                    <p className="text-sm text-[#0B192C] font-bold mt-1">{fmtPKR(i.price_pkr)}</p>
                     <div className="mt-2 flex items-center justify-between">
                       <div className="inline-flex items-center border rounded">
                         <button
@@ -69,19 +69,23 @@ export function CartDrawer() {
                 </div>
               ))}
             </div>
-            <div className="border-t p-5 space-y-3 bg-muted/40">
+            <div className="border-t p-5 space-y-3 bg-slate-50/70">
               <div className="flex justify-between font-semibold">
                 <span>Subtotal</span>
-                <span className="text-primary">{fmtPKR(subtotal)}</span>
+                <span className="text-[#0B192C] font-black">{fmtPKR(subtotal)}</span>
               </div>
               <p className="text-xs text-muted-foreground">Shipping calculated at checkout.</p>
-              <Button asChild className="w-full" onClick={() => setDrawerOpen(false)}>
+              <Button
+                asChild
+                className="w-full bg-[#FF7A00] hover:bg-[#E56E00] text-white font-bold h-11 shadow-xs"
+                onClick={() => setDrawerOpen(false)}
+              >
                 <Link to="/checkout">Checkout</Link>
               </Button>
               <Button
                 asChild
                 variant="outline"
-                className="w-full"
+                className="w-full border-[#0052B4] text-[#0052B4] hover:bg-blue-50 font-bold"
                 onClick={() => setDrawerOpen(false)}
               >
                 <Link to="/cart">View full cart</Link>

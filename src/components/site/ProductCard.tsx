@@ -21,6 +21,8 @@ export type Product = {
   availability: string;
   rating: number | null;
   stock: number;
+  specs?: Record<string, unknown>;
+  tags?: string[];
 };
 
 export const ProductCard = React.memo(function ProductCard({
@@ -77,11 +79,11 @@ export const ProductCard = React.memo(function ProductCard({
 
   if (view === "list") {
     return (
-      <div className="flex gap-4 p-4 rounded-lg border border-slate-200 bg-white hover:shadow-md transition group relative">
+      <div className="flex gap-4 p-4 rounded-lg border border-[#E2E8F0] bg-white hover:shadow-md transition group relative">
         <Link
           to={detailTo}
           params={{ slug: productSlug }}
-          className="relative h-28 w-28 sm:h-36 sm:w-36 shrink-0 rounded-md bg-slate-50 border border-slate-100 overflow-hidden block"
+          className="relative h-28 w-28 sm:h-36 sm:w-36 shrink-0 rounded-md bg-[#F8FAFC] border border-[#E2E8F0] overflow-hidden block"
         >
           <img
             src={optimizeProductImageUrl(p.image_url, "card")}
@@ -94,7 +96,7 @@ export const ProductCard = React.memo(function ProductCard({
             className="h-full w-full object-cover group-hover:scale-105 transition duration-500"
           />
           {p.discount_pct > 0 && (
-            <span className="absolute top-1.5 left-1.5 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+            <span className="absolute top-1.5 left-1.5 bg-[#FF7A00] text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-xs">
               -{p.discount_pct}%
             </span>
           )}
@@ -102,16 +104,19 @@ export const ProductCard = React.memo(function ProductCard({
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div>
             <Link to={detailTo} params={{ slug: productSlug }} className="block">
-              <div className="text-[10px] text-slate-400 font-semibold tracking-wide uppercase">
-                {p.manufacturer || "Nexus"} • {p.category}
+              <div className="text-[10px] text-slate-500 font-semibold tracking-wide uppercase">
+                {p.manufacturer || "SmartZone"} • {p.category}
               </div>
-              <h3 className="text-xs sm:text-sm font-semibold text-slate-800 mt-1 line-clamp-2 hover:text-primary transition-colors leading-snug">
+              <h3
+                title={p.title}
+                className="text-sm font-semibold text-[#0B192C] leading-snug line-clamp-2 h-10 hover:text-[#0052B4] transition-colors mt-1"
+              >
                 {p.title}
               </h3>
               <div className="flex items-center gap-1.5 mt-1.5 text-xs">
-                <div className="flex items-center text-amber-500">
+                <div className="flex items-center text-[#F59E0B]">
                   <Star className="h-3.5 w-3.5 fill-current" />
-                  <span className="font-bold text-slate-800 ml-1 text-xs">
+                  <span className="font-bold text-[#0B192C] ml-1 text-xs">
                     {ratingValue.toFixed(1)}
                   </span>
                 </div>
@@ -123,7 +128,7 @@ export const ProductCard = React.memo(function ProductCard({
           <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
             <div>
               <div className="flex items-baseline gap-2">
-                <span className="text-base sm:text-lg font-black text-primary leading-none">
+                <span className="text-base sm:text-lg font-black text-[#0B192C] leading-none">
                   {fmtPKR(p.price_pkr)}
                 </span>
                 {original && (
@@ -138,15 +143,17 @@ export const ProductCard = React.memo(function ProductCard({
                 {inStock ? "In Stock" : "Out of Stock"}
               </span>
             </div>
-            <Button
-              size="sm"
-              onClick={onAdd}
-              disabled={!inStock}
-              className="bg-primary hover:bg-primary/90 text-white font-bold h-9 px-4 shadow-sm"
-              aria-label={`Add ${p.title} to cart`}
-            >
-              <ShoppingCart className="h-4 w-4 mr-1.5" /> Add to Cart
-            </Button>
+            <div>
+              <Button
+                size="sm"
+                onClick={onAdd}
+                disabled={!inStock}
+                className="bg-[#FF7A00] hover:bg-[#E56E00] text-white font-bold h-9 px-4 shadow-sm transition"
+                aria-label={`Add ${p.title} to cart`}
+              >
+                <ShoppingCart className="h-4 w-4 mr-1.5" /> Add to Cart
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -154,11 +161,11 @@ export const ProductCard = React.memo(function ProductCard({
   }
 
   return (
-    <article className="group flex flex-col rounded-lg border border-slate-200/70 bg-white overflow-hidden hover:shadow-md hover:border-primary/20 transition-all duration-300 relative">
+    <article className="group flex flex-col rounded-lg border border-[#E2E8F0] bg-white overflow-hidden hover:shadow-md hover:border-[#0052B4]/40 transition-all duration-300 relative">
       <Link
         to={detailTo}
         params={{ slug: productSlug }}
-        className="block relative aspect-[4/3] bg-slate-50 border-b border-slate-100 overflow-hidden"
+        className="block relative aspect-[4/3] bg-[#F8FAFC] border-b border-[#E2E8F0] overflow-hidden"
       >
         <img
           src={optimizeProductImageUrl(p.image_url, "card")}
@@ -171,7 +178,7 @@ export const ProductCard = React.memo(function ProductCard({
           className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition duration-500"
         />
         {p.discount_pct > 0 && (
-          <span className="absolute top-2 left-2 bg-primary text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded shadow-sm">
+          <span className="absolute top-2 left-2 bg-[#FF7A00] text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded shadow-xs">
             -{p.discount_pct}%
           </span>
         )}
@@ -180,7 +187,7 @@ export const ProductCard = React.memo(function ProductCard({
           onClick={onToggleFav}
           aria-label={isFav ? "Remove from wishlist" : "Add to wishlist"}
           className={cn(
-            "absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md transition-all shadow-sm z-10",
+            "absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md transition-all shadow-xs z-10",
             isFav
               ? "bg-rose-50 text-rose-600 hover:bg-rose-100"
               : "bg-white/80 text-slate-600 hover:text-rose-600 hover:bg-white",
@@ -199,15 +206,18 @@ export const ProductCard = React.memo(function ProductCard({
       <div className="p-3 flex flex-col flex-1 justify-between bg-white">
         <Link to={detailTo} params={{ slug: productSlug }} className="block">
           <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
-            {p.manufacturer || "NexusIoT"}
+            {p.manufacturer || "SmartZone"}
           </div>
-          <h3 className="text-xs sm:text-sm font-medium text-slate-800 mt-1 line-clamp-2 min-h-[36px] sm:min-h-[40px] hover:text-primary transition-colors leading-tight">
+          <h3
+            title={p.title}
+            className="text-sm font-semibold text-[#0B192C] leading-snug line-clamp-2 h-10 hover:text-[#0052B4] transition-colors mt-1"
+          >
             {p.title}
           </h3>
           <div className="flex items-center gap-1 mt-1 text-[10px] sm:text-xs">
-            <div className="flex items-center text-amber-500">
+            <div className="flex items-center text-[#F59E0B]">
               <Star className="h-3 w-3 sm:h-3.5 sm:w-3.5 fill-current" />
-              <span className="font-bold text-slate-800 ml-0.5 text-[10px] sm:text-xs">
+              <span className="font-bold text-[#0B192C] ml-0.5 text-[10px] sm:text-xs">
                 {ratingValue.toFixed(1)}
               </span>
             </div>
@@ -215,7 +225,7 @@ export const ProductCard = React.memo(function ProductCard({
           </div>
           <div className="mt-2.5">
             <div className="flex items-baseline gap-1.5 flex-wrap">
-              <span className="text-sm sm:text-base font-extrabold text-primary leading-none">
+              <span className="text-sm sm:text-base font-black text-[#0B192C] leading-none">
                 {fmtPKR(p.price_pkr)}
               </span>
               {original && (
@@ -226,15 +236,17 @@ export const ProductCard = React.memo(function ProductCard({
             </div>
           </div>
         </Link>
-        <Button
-          size="sm"
-          className="mt-3 w-full bg-primary hover:bg-primary/90 text-white font-bold h-8 text-xs sm:text-sm transition shadow-sm"
-          onClick={onAdd}
-          disabled={!inStock}
-          aria-label={`Add ${p.title} to cart`}
-        >
-          <ShoppingCart className="h-3.5 w-3.5 mr-1.5" /> Add
-        </Button>
+        <div className="mt-3">
+          <Button
+            size="sm"
+            className="w-full bg-[#FF7A00] hover:bg-[#E56E00] text-white font-bold h-8 text-xs transition shadow-xs"
+            onClick={onAdd}
+            disabled={!inStock}
+            aria-label={`Add ${p.title} to cart`}
+          >
+            <ShoppingCart className="h-3.5 w-3.5 mr-1.5" /> Add to Cart
+          </Button>
+        </div>
       </div>
     </article>
   );

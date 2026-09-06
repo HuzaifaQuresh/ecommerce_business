@@ -1,14 +1,19 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Cpu, KeyRound, Eye, EyeOff, CheckCircle2, Loader2, ShieldAlert } from "lucide-react";
+import { KeyRound, Eye, EyeOff, CheckCircle2, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
+import { SmartZoneLogo } from "@/components/site/SmartZoneLogo";
 
 export const Route = createFileRoute("/auth/reset-password")({
-  head: () => ({ meta: [{ title: "Set New Password — NexusIoT" }] }),
+  head: () => ({
+    meta: [
+      { title: "Set New Password — SmartZone — IT Solutions, Smart Automation & Electronics" },
+    ],
+  }),
   component: ResetPassword,
 });
 
@@ -72,13 +77,12 @@ function ResetPassword() {
   ];
 
   return (
-    <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4">
+    <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4 bg-slate-50/50">
       <div className="w-full max-w-md">
-        <div className="flex items-center gap-2 mb-8">
-          <div className="grid h-10 w-10 place-items-center rounded-md bg-primary text-primary-foreground">
-            <Cpu className="h-5 w-5" />
-          </div>
-          <span className="text-xl font-bold">NexusIoT</span>
+        <div className="flex items-center justify-center mb-6">
+          <Link to="/" aria-label="SmartZone Home">
+            <SmartZoneLogo size="md" showTagline={true} />
+          </Link>
         </div>
 
         <div className="rounded-2xl border bg-card p-6 sm:p-8 shadow-[var(--shadow-elevated)]">

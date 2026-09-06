@@ -329,10 +329,13 @@ export function ProductCatalog({
                 </div>
 
                 <CardHeader className="p-4 pb-2 flex-1 space-y-1">
-                  <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                  <div className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
                     {product.category || product.manufacturer || "General"}
                   </div>
-                  <h3 className="font-semibold text-base line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+                  <h3
+                    title={product.title}
+                    className="text-sm font-semibold text-slate-800 leading-snug line-clamp-2 h-10 group-hover:text-primary transition-colors"
+                  >
                     {product.title}
                   </h3>
                 </CardHeader>

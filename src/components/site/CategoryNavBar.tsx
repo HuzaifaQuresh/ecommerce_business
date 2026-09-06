@@ -222,8 +222,7 @@ function MoreCategoriesDropdown({ depts }: { depts: CategoryNode[] }) {
 }
 
 export function CategoryNavBar() {
-  const mainDepts = CATEGORY_CATALOG.slice(0, 5);
-  const remainingDepts = CATEGORY_CATALOG.slice(5);
+  const mainDepts = CATEGORY_CATALOG;
 
   return (
     <div className="hidden md:block border-t border-slate-100 bg-white">
@@ -234,12 +233,11 @@ export function CategoryNavBar() {
             search={{}}
             className="inline-flex items-center px-3 text-xs font-semibold text-slate-500 hover:text-primary whitespace-nowrap shrink-0 transition h-10"
           >
-            All
+            All Departments
           </Link>
           {mainDepts.map((dept) => (
             <CategoryNavItem key={dept.name} dept={dept} />
           ))}
-          {remainingDepts.length > 0 && <MoreCategoriesDropdown depts={remainingDepts} />}
         </div>
       </div>
     </div>

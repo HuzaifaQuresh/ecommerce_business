@@ -182,7 +182,7 @@ function AccountProfile() {
         </form>
       </SectionCard>
 
-      <SectionCard title="Your role on NexusIoT">
+      <SectionCard title="Your role on SmartZone">
         <div className="flex items-start gap-3 mb-4 p-4 rounded-lg bg-muted/40 border">
           <Shield className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div>

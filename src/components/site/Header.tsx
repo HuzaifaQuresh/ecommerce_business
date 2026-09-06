@@ -8,12 +8,22 @@ import {
   LogOut,
   LayoutDashboard,
   Menu,
+  X,
+  ChevronDown,
   Crown,
   Store,
   User2,
   Settings,
   Package,
+  Mail,
+  MapPin,
+  Phone,
+  Facebook,
+  Twitter,
+  Instagram,
+  Linkedin,
 } from "lucide-react";
+import { SmartZoneLogo } from "@/components/site/SmartZoneLogo";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,7 +52,7 @@ export function Header() {
   const { count: wishlistCount, setDrawerOpen: setWishlistOpen } = useWishlist();
   const { user, roles, isAdmin, isSuperAdmin, isVendor, signOut } = useAuth();
   const { data: settings } = useSiteSettings();
-  const siteName = String(settings?.site_name ?? "NexusIoT").replace(/"/g, "");
+  const siteName = String(settings?.site_name ?? "SmartZone").replace(/"/g, "");
   const siteLogoUrl = settings?.site_logo ? String(settings.site_logo).replace(/"/g, "") : "";
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
@@ -79,34 +89,74 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white text-slate-800 border-b border-slate-200 shadow-sm overflow-visible">
-      {/* Top Banner Bar */}
-      <div className="bg-slate-50 text-[11px] text-slate-500 py-1.5 border-b border-slate-100 hidden md:block">
+    <header className="sticky top-0 z-50 bg-white text-slate-800 border-b border-[#E2E8F0] shadow-xs overflow-visible">
+      {/* SmartZone Logo Brand Accent Bar (Cyan -> Deep Blue -> Logo Arrow Orange) */}
+      <div className="h-0.5 w-full bg-gradient-to-r from-[#00A3E0] via-[#0052B4] to-[#FF7A00]" />
+
+      {/* Top Banner Bar - Solid Deep Navy */}
+      <div className="bg-[#0B192C] text-slate-300 text-[11px] py-2 border-b border-white/10 hidden md:block">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex justify-between items-center">
-          <div className="flex gap-4 font-medium items-center">
+          <div className="flex gap-6 items-center">
+            <div className="flex items-center gap-1.5">
+              <Mail className="h-3.5 w-3.5 text-[#00A3E0]" />
+              <a
+                href="mailto:info@smartzone.pk"
+                className="hover:text-[#00A3E0] transition-colors font-medium"
+              >
+                info@smartzone.pk
+              </a>
+            </div>
+            <span className="text-slate-700">|</span>
+            <div className="flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 text-[#FF7A00]" />
+              <span className="text-slate-300 font-medium">
+                Office F26, 1st Floor, Mid City Mall, Rawalpindi
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setContactOpen(true)}
-              className="hover:text-primary transition cursor-pointer text-[11px] font-medium"
+              className="hover:text-[#FF7A00] transition cursor-pointer font-medium"
             >
               Contact Us
             </button>
-            <span className="text-slate-300">|</span>
+            <span className="text-slate-700">|</span>
             <button
               type="button"
               onClick={() => setTrackOpen(true)}
-              className="hover:text-primary transition cursor-pointer text-[11px] font-medium"
+              className="hover:text-[#FF7A00] transition cursor-pointer font-medium"
             >
-              Track My Order
+              Track Order
             </button>
-          </div>
-          <div className="flex gap-4 items-center">
-            <a
-              href="mailto:sales@nexusiot.pk"
-              className="font-medium text-slate-600 hover:text-primary transition-colors"
-            >
-              sales@nexusiot.pk
-            </a>
+            <span className="text-slate-700">|</span>
+            <div className="flex gap-2">
+              <a
+                href="#"
+                className="h-5 w-5 rounded-full bg-[#0F2C59] hover:bg-[#FF7A00] flex items-center justify-center text-slate-300 hover:text-white transition"
+              >
+                <Facebook className="h-3 w-3" />
+              </a>
+              <a
+                href="#"
+                className="h-5 w-5 rounded-full bg-[#0F2C59] hover:bg-[#FF7A00] flex items-center justify-center text-slate-300 hover:text-white transition"
+              >
+                <Twitter className="h-3 w-3" />
+              </a>
+              <a
+                href="#"
+                className="h-5 w-5 rounded-full bg-[#0F2C59] hover:bg-[#FF7A00] flex items-center justify-center text-slate-300 hover:text-white transition"
+              >
+                <Instagram className="h-3 w-3" />
+              </a>
+              <a
+                href="#"
+                className="h-5 w-5 rounded-full bg-[#0F2C59] hover:bg-[#FF7A00] flex items-center justify-center text-slate-300 hover:text-white transition"
+              >
+                <Linkedin className="h-3 w-3" />
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -125,34 +175,45 @@ export function Header() {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-full max-w-xs p-0 flex flex-col">
-              <SheetHeader className="border-b px-4 py-4 text-left">
-                <SheetTitle className="flex items-center gap-2">
-                  {siteLogoUrl ? (
-                    <img src={siteLogoUrl} alt="Logo" className="h-5 w-5 rounded object-cover" />
-                  ) : (
-                    <Cpu className="h-5 w-5 text-primary" />
-                  )}
-                  {siteName}
-                </SheetTitle>
-              </SheetHeader>
-              <nav className="flex-1 overflow-y-auto p-4 space-y-1 text-sm">
+            <SheetContent
+              side="left"
+              className="w-full max-w-xs p-0 flex flex-col [&>button]:hidden"
+            >
+              <div className="border-b px-4 py-4 flex items-center justify-between bg-white">
+                <Link to="/" onClick={() => setMenuOpen(false)}>
+                  <SmartZoneLogo size="md" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen(false)}
+                  className="bg-[#FF7A00] hover:bg-[#E56E00] text-white p-2 rounded flex items-center justify-center transition shadow-xs"
+                  aria-label="Close menu"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <nav className="flex-1 overflow-y-auto p-4 space-y-1 text-sm bg-white">
                 {[
-                  { to: "/", label: "Home" },
-                  { to: "/products", label: "Shop All" },
-                  { to: "/iot-solutions", label: "Enterprise IoT Solutions" },
-                  { to: "/cart", label: `Cart${count > 0 ? ` (${count})` : ""}` },
-                ].map(({ to, label }) => (
+                  { to: "/", label: "HOME" },
+                  { to: "/iot-solutions", label: "ABOUT US" },
+                  { to: "/products", label: "SERVICES / PRODUCTS", hasChevron: true },
+                  { to: "/iot-solutions", label: "PROJECTS" },
+                  { to: "/products", label: "BLOG & NEWS" },
+                  { to: "/cart", label: `CART${count > 0 ? ` (${count})` : ""}` },
+                ].map(({ to, label, hasChevron }) => (
                   <Link
-                    key={to}
+                    key={to + label}
                     to={to}
                     onClick={() => setMenuOpen(false)}
                     className={cn(
-                      "block px-3 py-2.5 rounded-md hover:bg-muted font-medium transition-colors",
-                      path === to && "bg-primary/10 text-primary",
+                      "flex items-center justify-between px-3 py-2.5 font-bold transition-colors uppercase tracking-wider text-xs",
+                      path === to
+                        ? "text-[#FF7A00] bg-[#FF7A00]/10"
+                        : "text-slate-800 hover:text-[#FF7A00] hover:bg-slate-50",
                     )}
                   >
-                    {label}
+                    <span>{label}</span>
+                    {hasChevron && <ChevronDown className="h-3.5 w-3.5 text-slate-400" />}
                   </Link>
                 ))}
 
@@ -162,9 +223,9 @@ export function Header() {
                     setMenuOpen(false);
                     setContactOpen(true);
                   }}
-                  className="w-full text-left block px-3 py-2.5 rounded-md hover:bg-muted font-medium transition-colors text-slate-700"
+                  className="w-full text-left flex items-center justify-between px-3 py-2.5 font-bold transition-colors uppercase tracking-wider text-xs text-slate-800 hover:text-[#FF7A00] hover:bg-slate-50"
                 >
-                  Contact Us
+                  CONTACT US
                 </button>
                 <button
                   type="button"
@@ -172,18 +233,18 @@ export function Header() {
                     setMenuOpen(false);
                     setTrackOpen(true);
                   }}
-                  className="w-full text-left block px-3 py-2.5 rounded-md hover:bg-muted font-medium transition-colors text-slate-700"
+                  className="w-full text-left flex items-center justify-between px-3 py-2.5 font-bold transition-colors uppercase tracking-wider text-xs text-slate-800 hover:text-[#FF7A00] hover:bg-slate-50"
                 >
-                  Track My Order
+                  TRACK MY ORDER
                 </button>
 
-                <p className="px-1 pt-4 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Shop by category
+                <p className="px-3 pt-6 pb-2 text-[10px] font-bold uppercase tracking-widest text-[#0052B4]">
+                  Browse Categories
                 </p>
                 <CategoryTreeNav onSelect={() => setMenuOpen(false)} />
               </nav>
               {user ? (
-                <div className="border-t p-4 space-y-2">
+                <div className="border-t p-4 space-y-2 bg-slate-50">
                   <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                   <div className="flex flex-wrap gap-1">
                     {roles.map((r) => (
@@ -209,10 +270,10 @@ export function Header() {
                   </div>
                 </div>
               ) : (
-                <div className="border-t p-4 space-y-2">
+                <div className="border-t p-4 space-y-2 bg-slate-50">
                   <Button
                     asChild
-                    className="w-full text-white bg-primary hover:bg-primary/90"
+                    className="w-full text-white bg-[#FF7A00] hover:bg-[#E56E00] font-bold"
                     size="sm"
                   >
                     <Link to="/auth" onClick={() => setMenuOpen(false)}>
@@ -225,21 +286,12 @@ export function Header() {
           </Sheet>
 
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 shrink-0 min-w-0">
-            {siteLogoUrl ? (
-              <img
-                src={siteLogoUrl}
-                alt="Logo"
-                className="h-8 w-8 sm:h-9 sm:w-9 rounded-md object-cover border shadow-sm"
-              />
-            ) : (
-              <div className="grid h-8 w-8 sm:h-9 sm:w-9 place-items-center rounded-md bg-primary text-primary-foreground">
-                <Cpu className="h-4 w-4 sm:h-5 sm:w-5" />
-              </div>
-            )}
-            <span className="text-base sm:text-lg font-bold tracking-tight truncate">
-              {siteName}
-            </span>
+          <Link
+            to="/"
+            className="flex items-center gap-2.5 shrink-0 min-w-0 group"
+            aria-label="SmartZone Home"
+          >
+            <SmartZoneLogo size="md" />
           </Link>
 
           {/* Mobile Spacer to push right-side elements to the right */}
@@ -255,27 +307,38 @@ export function Header() {
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="Search cameras, sensors, smart home, development boards..."
                   aria-label="Search products, cameras, sensors and dev boards"
-                  className="h-10 w-full bg-slate-50 text-slate-900 pl-10 pr-4 rounded-l-md rounded-r-none border border-slate-200 focus-visible:ring-primary focus-visible:border-primary focus-visible:bg-white transition-colors text-xs sm:text-sm"
+                  className="h-10 w-full bg-slate-50 text-slate-900 pl-10 pr-4 rounded-l-md rounded-r-none border border-slate-200 focus-visible:ring-[#0052B4] focus-visible:border-[#0052B4] focus-visible:bg-white transition-colors text-xs sm:text-sm"
                 />
               </div>
               <Button
                 type="submit"
-                className="h-10 rounded-l-none rounded-r-md bg-primary hover:bg-primary/90 px-6 text-white text-xs sm:text-sm font-semibold shrink-0 shadow-sm transition-all"
+                className="h-10 rounded-l-none rounded-r-md bg-[#FF7A00] hover:bg-[#E56E00] px-6 text-white text-xs sm:text-sm font-bold shrink-0 shadow-xs transition-all border-0"
               >
                 Search
               </Button>
             </div>
           </form>
 
-          {/* Desktop nav link */}
-          <nav className="hidden lg:flex items-center gap-1 text-sm ml-auto">
-            <Link
-              to="/iot-solutions"
-              className="px-3 py-2 hover:text-primary transition rounded-md"
+          {/* Discuss Your Project Widget */}
+          <div className="hidden xl:flex items-center gap-2.5 shrink-0 pl-2">
+            <a
+              href="tel:03125676066"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FF7A00] text-white shadow-xs hover:bg-[#E56E00] transition"
             >
-              IoT Solutions
-            </Link>
-          </nav>
+              <Phone className="h-4 w-4" />
+            </a>
+            <div className="text-left">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Discuss Your Project
+              </p>
+              <a
+                href="tel:03125676066"
+                className="text-xs font-bold text-[#0B192C] hover:text-[#FF7A00] transition"
+              >
+                03125676066
+              </a>
+            </div>
+          </div>
 
           {/* Wishlist button */}
           <button
@@ -303,7 +366,7 @@ export function Header() {
             <ShoppingCart className="h-5 w-5" />
             <span className="hidden lg:inline text-sm">Cart</span>
             {count > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-primary text-white text-[10px] font-bold px-1">
+              <span className="absolute -top-0.5 -right-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-[#FF7A00] text-white text-[10px] font-bold px-1">
                 {count}
               </span>
             )}
@@ -320,7 +383,7 @@ export function Header() {
                   <div
                     className={cn(
                       "grid h-8 w-8 place-items-center rounded-full text-white text-xs font-bold shrink-0",
-                      avatarColor[primary] ?? "bg-primary",
+                      avatarColor[primary] ?? "bg-[#0052B4]",
                     )}
                   >
                     {initials}
@@ -391,8 +454,7 @@ export function Header() {
             <Button
               asChild
               size="sm"
-              variant="secondary"
-              className="inline-flex shrink-0 text-xs sm:text-sm px-2.5 sm:px-4"
+              className="inline-flex shrink-0 text-xs sm:text-sm px-2.5 sm:px-4 bg-[#0052B4] hover:bg-[#003E8A] text-white font-semibold"
             >
               <Link to="/auth">Sign in</Link>
             </Button>

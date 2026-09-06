@@ -1,6 +1,6 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft, Cpu, LogOut, Menu, type LucideIcon } from "lucide-react";
+import { ArrowLeft, LogOut, Menu, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DashboardUserPanel } from "@/components/dashboard/DashboardUserPanel";
@@ -8,6 +8,7 @@ import { DASHBOARD_THEME, type DashboardVariant } from "@/lib/dashboard-theme";
 import type { AppRole } from "@/types/commerce";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { SmartZoneLogo } from "@/components/site/SmartZoneLogo";
 
 export type NavItem = {
   to: string;
@@ -136,11 +137,10 @@ export function DashboardShell({
       </Link>
 
       <div className="flex items-center gap-3 mb-6 pb-5 border-b border-slate-200">
-        <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground shrink-0">
-          <Cpu className="h-5 w-5" />
-        </div>
+        <Link to="/" aria-label="SmartZone Home">
+          <SmartZoneLogo size="sm" showTagline={false} />
+        </Link>
         <div className="min-w-0">
-          <div className="font-bold text-sm tracking-tight text-slate-900 truncate">NexusIoT</div>
           <div
             className={cn("text-[10px] font-semibold uppercase tracking-wider", theme.accentText)}
           >

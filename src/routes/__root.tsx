@@ -19,6 +19,7 @@ import { Footer } from "@/components/site/Footer";
 import { CartDrawer } from "@/components/site/CartDrawer";
 import { WishlistDrawer } from "@/components/site/WishlistDrawer";
 import { MobileStoreNav } from "@/components/site/MobileStoreNav";
+import { WhatsAppWidget } from "@/components/site/WhatsAppWidget";
 import { Toaster } from "@/components/ui/sonner";
 import { initializeMockProductsOnClient } from "@/lib/mock-products";
 
@@ -84,32 +85,32 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { name: "theme-color", content: "#0284c7" },
-      { title: "NexusIoT — IoT Automation, Smart Home & Tuya Sensors in Pakistan" },
+      { name: "theme-color", content: "#FF7A00" },
+      { title: "SmartZone — IT Solutions, Smart Automation & Electronics" },
       {
         name: "description",
         content:
-          "Pakistan's premier IoT, smart home and Tuya sensor platform. Cameras, gateways, dev boards, industrial automation and custom enterprise IoT deployments.",
+          "Pakistan's premier IT services, industrial automation, and smart electronics provider. Best tech, best future.",
       },
       {
         property: "og:title",
-        content: "NexusIoT — IoT Automation, Smart Home & Tuya Sensors in Pakistan",
+        content: "SmartZone — IT Solutions & Automation",
       },
       {
         property: "og:description",
         content:
-          "Pakistan's premier IoT, smart home and Tuya sensor platform. Cameras, gateways, dev boards, industrial automation and custom enterprise IoT deployments.",
+          "Pakistan's premier IT services, industrial automation, and smart electronics provider. Best tech, best future.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       {
         name: "twitter:title",
-        content: "NexusIoT — IoT Automation, Smart Home & Tuya Sensors in Pakistan",
+        content: "SmartZone — IoT Automation, Smart Hardware & Electronics",
       },
       {
         name: "twitter:description",
         content:
-          "Pakistan's premier IoT, smart home and Tuya sensor platform. Cameras, gateways, dev boards, industrial automation and custom enterprise IoT deployments.",
+          "Pakistan's premier IoT, smart automation and tech platform. Cameras, gateways, dev boards, industrial automation and custom enterprise IoT deployments.",
       },
       { property: "og:image", content: "/og-image.svg" },
       { name: "twitter:image", content: "/og-image.svg" },
@@ -165,6 +166,7 @@ function RootComponent() {
             </main>
             {!isDashboard && <Footer />}
             {!isDashboard && <MobileStoreNav />}
+            {!isDashboard && <WhatsAppWidget />}
             <CartDrawer />
             <WishlistDrawer />
             <Toaster richColors position="top-right" />

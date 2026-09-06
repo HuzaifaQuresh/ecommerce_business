@@ -70,10 +70,10 @@ export function ContactUsDialog({ open, onOpenChange }: ContactUsDialogProps) {
           {/* Contact Details Panel (Sidebar) */}
           <div className="bg-slate-900 text-slate-100 p-6 md:p-8 flex flex-col justify-between md:col-span-2">
             <div>
-              <h3 className="text-xl font-bold tracking-tight text-white mb-2">NexusIoT</h3>
+              <h3 className="text-xl font-bold tracking-tight text-white mb-2">SmartZone</h3>
               <p className="text-xs text-slate-400 mb-8">
-                Your premier partner for industrial, enterprise, and home IoT development across
-                Pakistan.
+                Your premier partner for IT solutions, smart automation, and electronics development
+                across Pakistan.
               </p>
 
               <div className="space-y-5">
@@ -106,7 +106,7 @@ export function ContactUsDialog({ open, onOpenChange }: ContactUsDialogProps) {
                     <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
                       Email Inquiry
                     </h4>
-                    <p className="text-sm text-slate-400 mt-1">sales@nexusiot.pk</p>
+                    <p className="text-sm text-slate-400 mt-1">sales@smartzone.pk</p>
                   </div>
                 </div>
 
@@ -124,7 +124,7 @@ export function ContactUsDialog({ open, onOpenChange }: ContactUsDialogProps) {
             </div>
 
             <div className="mt-8 pt-6 border-t border-slate-800 text-center text-[11px] text-slate-500">
-              © {new Date().getFullYear()} NexusIoT Pakistan
+              © {new Date().getFullYear()} SmartZone Pakistan
             </div>
           </div>
 

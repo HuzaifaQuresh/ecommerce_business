@@ -743,7 +743,7 @@ function AdminUsers() {
                 <Input
                   id="create-email"
                   type="email"
-                  placeholder="e.g. admin@nexus.pk"
+                  placeholder="e.g. admin@smartzone.pk"
                   className="pl-9"
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}

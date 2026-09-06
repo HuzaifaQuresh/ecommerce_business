@@ -49,6 +49,13 @@
   --color-ink: var(--ink);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-midnight: var(--midnight);
+  --color-midnight-slate: var(--midnight-slate);
+  --color-cta-orange: var(--cta-orange);
+  --color-cta-orange-hover: var(--cta-orange-hover);
+  --color-cta-orange-light: var(--cta-orange-light);
+  --color-whatsapp: var(--whatsapp);
+  --color-whatsapp-hover: var(--whatsapp-hover);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -62,84 +69,129 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-sz-cyan: var(--sz-cyan);
+  --color-sz-blue: var(--sz-blue);
+  --color-sz-orange: var(--sz-orange);
+  --color-sz-navy: var(--sz-navy);
+  --color-brand-blue: #0052B4;
+  --color-brand-cyan: #00A3E0;
+  --color-brand-orange: #FF7A00;
+  --color-brand-navy: #0B192C;
 }
 
 :root {
   --radius: 0.5rem;
-  --background: oklch(0.985 0.005 230);
-  --foreground: oklch(0.16 0.015 230);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.16 0.015 230);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.16 0.015 230);
-  --primary: oklch(0.56 0.18 230);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.95 0.01 230);
-  --secondary-foreground: oklch(0.16 0.015 230);
-  --muted: oklch(0.94 0.008 230);
-  --muted-foreground: oklch(0.45 0.01 230);
-  --accent: oklch(0.93 0.03 230);
-  --accent-foreground: oklch(0.5 0.17 230);
-  --destructive: oklch(0.6 0.22 27);
-  --destructive-foreground: oklch(1 0 0);
-  --success: oklch(0.65 0.16 155);
-  --warning: oklch(0.78 0.16 75);
-  --border: oklch(0.91 0.01 230);
-  --input: oklch(0.91 0.01 230);
-  --ring: oklch(0.56 0.18 230);
-  --ink: oklch(0.16 0.015 230);
-  --gradient-hero: linear-gradient(135deg, oklch(0.22 0.06 230) 0%, oklch(0.1 0.03 230) 100%);
-  --gradient-accent: linear-gradient(90deg, oklch(0.56 0.18 230), oklch(0.48 0.17 215));
-  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 2px 8px -2px rgba(0, 0, 0, 0.04);
-  --shadow-elevated: 0 12px 30px -10px rgba(14, 116, 144, 0.12);
-  --chart-1: oklch(0.56 0.18 230);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.16 0.015 230);
-  --sidebar-primary: oklch(0.56 0.18 230);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.93 0.03 230);
-  --sidebar-accent-foreground: oklch(0.5 0.17 230);
-  --sidebar-border: oklch(0.91 0.01 230);
-  --sidebar-ring: oklch(0.56 0.18 230);
+
+  /* Backgrounds & Cards: Crisp White (#FFFFFF) with subtle cool gray borders (#E2E8F0) */
+  --background: #FFFFFF;
+  --foreground: #0B192C;
+  --card: #FFFFFF;
+  --card-foreground: #0B192C;
+  --popover: #FFFFFF;
+  --popover-foreground: #0B192C;
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --muted: #F8FAFC;
+  --muted-foreground: #64748B;
+  --secondary: #F1F5F9;
+  --secondary-foreground: #0B192C;
+
+  /* Brand Typography & Headings: Solid Deep Navy (#0B192C) */
+  --midnight: #0B192C;
+  --midnight-slate: #0F2C59;
+  --ink: #0B192C;
+
+  /* Primary Brand Blue & Logo Arrow Orange (#FF7A00) CTAs */
+  --primary: #0052B4;
+  --primary-foreground: #FFFFFF;
+  --cta-orange: #FF7A00;
+  --cta-orange-hover: #E56E00;
+  --cta-orange-light: #FF9433;
+  --accent: #F0F7FF;
+  --accent-foreground: #0052B4;
+  --ring: #0052B4;
+
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --success: #10B981;
+  --warning: #F59E0B;
+
+  /* WhatsApp Green (#25D366) */
+  --whatsapp: #25D366;
+  --whatsapp-hover: #20BD5A;
+
+  /* Sleek Tech Gradient matching shield logo: #0B192C -> #0F2C59 -> #0052B4 */
+  --gradient-hero: linear-gradient(135deg, #0B192C 0%, #0F2C59 50%, #0052B4 100%);
+  --gradient-brand: linear-gradient(90deg, #0052B4 0%, #0284C7 100%);
+  --gradient-accent: linear-gradient(90deg, #FF7A00 0%, #FFA133 100%);
+  --shadow-card: 0 1px 3px 0 rgba(11, 25, 44, 0.05), 0 2px 8px -2px rgba(11, 25, 44, 0.05);
+  --shadow-elevated: 0 12px 30px -10px rgba(0, 82, 180, 0.22);
+  --chart-1: #FF7A00;
+  --chart-2: #0052B4;
+  --chart-3: #0B192C;
+  --chart-4: #0284C7;
+  --chart-5: #25D366;
+  --sidebar: #0B192C;
+  --sidebar-foreground: #F8FAFC;
+  --sidebar-primary: #FF7A00;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #0F2C59;
+  --sidebar-accent-foreground: #F8FAFC;
+  --sidebar-border: #1E293B;
+  --sidebar-ring: #0052B4;
+
+  /* Official SmartZone Logo Brand Colors */
+  --sz-cyan: #00A3E0;
+  --sz-blue: #0052B4;
+  --sz-orange: #FF7A00;
+  --sz-navy: #0B192C;
 }
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.68 0.16 230);
-  --primary-foreground: oklch(0.1 0.03 230);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.18 0.05 230);
-  --accent-foreground: oklch(0.68 0.16 230);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.68 0.16 230);
-  --chart-1: oklch(0.68 0.16 230);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.68 0.16 230);
-  --sidebar-primary-foreground: oklch(0.1 0.03 230);
-  --sidebar-accent: oklch(0.18 0.05 230);
-  --sidebar-accent-foreground: oklch(0.68 0.16 230);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.68 0.16 230);
+  --background: #0B192C;
+  --foreground: #F8FAFC;
+  --card: #0F2C59;
+  --card-foreground: #F8FAFC;
+  --popover: #0F2C59;
+  --popover-foreground: #F8FAFC;
+  --midnight: #070F1A;
+  --midnight-slate: #0F2C59;
+  --primary: #0284C7;
+  --primary-foreground: #FFFFFF;
+  --cta-orange: #FF7A00;
+  --cta-orange-hover: #E56E00;
+  --cta-orange-light: #FF9433;
+  --secondary: #1E293B;
+  --secondary-foreground: #F8FAFC;
+  --muted: #1E293B;
+  --muted-foreground: #94A3B8;
+  --accent: #1E293B;
+  --accent-foreground: #38BDF8;
+  --destructive: #F87171;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(226, 232, 240, 0.12);
+  --input: rgba(226, 232, 240, 0.15);
+  --ring: #0052B4;
+  --whatsapp: #25D366;
+  --whatsapp-hover: #20BD5A;
+  --chart-1: #FF7A00;
+  --chart-2: #38BDF8;
+  --chart-3: #94A3B8;
+  --chart-4: #0284C7;
+  --chart-5: #25D366;
+  --sidebar: #070F1A;
+  --sidebar-foreground: #F8FAFC;
+  --sidebar-primary: #FF7A00;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #0F2C59;
+  --sidebar-accent-foreground: #F8FAFC;
+  --sidebar-border: rgba(226, 232, 240, 0.12);
+  --sidebar-ring: #0052B4;
+
+  --sz-cyan: #00A3E0;
+  --sz-blue: #0284C7;
+  --sz-orange: #FF7A00;
+  --sz-navy: #070F1A;
 }
 
 @layer base {

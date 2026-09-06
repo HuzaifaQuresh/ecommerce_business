@@ -2,7 +2,6 @@ import type { Dispatch, SetStateAction } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { FilterX, SlidersHorizontal } from "lucide-react";
 import { CATEGORIES, AVAILABILITY_LABEL, getParentCategory } from "@/lib/format";
-import { CategoryTreeNav } from "@/components/site/CategoryTreeNav";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -108,11 +107,6 @@ export function ProductFiltersPanel({
 
   return (
     <div className={cn("space-y-4", className)}>
-      <div className="rounded-lg border bg-card p-4">
-        <h3 className="text-sm font-semibold mb-3">Categories</h3>
-        <CategoryTreeNav category={category} q={q} onSelect={onCategorySelect} />
-      </div>
-
       <div className="rounded-lg border bg-card p-4">
         <h3 className="text-sm font-semibold mb-3">Price Range (PKR)</h3>
         <Slider

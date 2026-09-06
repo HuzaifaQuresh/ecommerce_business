@@ -99,7 +99,7 @@ export function ProductGallery({ title, images }: Props) {
                 className={cn(
                   "relative h-[4.25rem] w-[4.25rem] sm:h-[4.75rem] sm:w-[4.75rem] shrink-0 overflow-hidden rounded-md bg-muted transition-all duration-200",
                   isActive
-                    ? "border-2 border-[#2563eb] opacity-100 shadow-sm"
+                    ? "border-2 border-[#FF6B00] opacity-100 shadow-sm ring-2 ring-[#FF6B00]/20"
                     : "border border-border/50 opacity-70 hover:opacity-100 hover:border-border",
                 )}
               >

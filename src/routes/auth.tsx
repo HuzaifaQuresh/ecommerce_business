@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import type { AppRole } from "@/types/commerce";
 import { Button } from "@/components/ui/button";
@@ -7,10 +7,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Cpu, ShieldCheck, Eye, EyeOff, Loader2, CheckCircle2, Lock } from "lucide-react";
+import { ShieldCheck, Eye, EyeOff, Loader2, CheckCircle2, Lock } from "lucide-react";
+import { SmartZoneLogo } from "@/components/site/SmartZoneLogo";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "Sign In — NexusIoT" }] }),
+  head: () => ({
+    meta: [
+      { title: "Sign In — SmartZone — IT Solutions, Smart Automation & Electronics" },
+      { property: "og:title", content: "Sign In — SmartZone" },
+      {
+        property: "og:description",
+        content:
+          "Sign in to SmartZone to manage your orders, smart home IoT hardware, and custom IT automation solutions.",
+      },
+    ],
+  }),
   validateSearch: (s: Record<string, unknown>) => ({
     redirect: typeof s.redirect === "string" ? s.redirect : undefined,
     tab: typeof s.tab === "string" ? s.tab : undefined,
@@ -42,6 +53,13 @@ function Auth() {
   const [name, setName] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    document.title =
+      activeTab === "signup"
+        ? "Sign Up — SmartZone — IT Solutions, Smart Automation & Electronics"
+        : "Sign In — SmartZone — IT Solutions, Smart Automation & Electronics";
+  }, [activeTab]);
 
   /** Reads roles from DB and sends user to correct workspace */
   const redirectAfterAuth = async () => {
@@ -161,66 +179,87 @@ function Auth() {
 
   return (
     <div className="min-h-[calc(100vh-8rem)] grid lg:grid-cols-2">
-      {/* Left panel — branding */}
-      <div
-        className="hidden lg:flex flex-col justify-center px-12 text-white"
-        style={{ background: "var(--gradient-hero)" }}
-      >
-        <div className="flex items-center gap-3 mb-6">
-          <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground">
-            <Cpu className="h-6 w-6" />
+      {/* Left panel — branding tile */}
+      <div className="hidden lg:flex flex-col justify-between p-12 text-white bg-gradient-to-br from-[#0B192C] via-[#0F2C59] to-[#0052B4] relative overflow-hidden">
+        {/* Ambient background glows */}
+        <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-[#00A3E0]/15 blur-3xl pointer-events-none" />
+        <div className="absolute -left-20 -bottom-20 w-80 h-80 rounded-full bg-[#FF7A00]/15 blur-3xl pointer-events-none" />
+
+        <div className="relative z-10">
+          <Link to="/" className="inline-block mb-8 group" aria-label="SmartZone Home">
+            <SmartZoneLogo size="lg" dark={true} showTagline={true} />
+          </Link>
+
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-xs text-[#00A3E0] text-xs font-semibold uppercase tracking-wider mb-4 border border-white/10">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#FF7A00] animate-pulse" />
+            Official Portal
           </div>
-          <span className="text-2xl font-bold tracking-tight">NexusIoT</span>
+
+          <h1 className="text-3xl xl:text-4xl font-black tracking-tight text-white leading-tight">
+            SmartZone
+            <span className="block text-xl xl:text-2xl font-semibold text-[#00A3E0] mt-1">
+              IT Solutions, Smart Automation & Electronics
+            </span>
+          </h1>
+          <p className="mt-4 text-slate-200 max-w-md leading-relaxed text-sm">
+            Pakistan's premier IT solutions, smart automation & commerce portal. Sign in to manage
+            orders, explore custom IoT solutions, and access your workspace.
+          </p>
+
+          <div className="mt-8 space-y-4 text-sm text-slate-200">
+            <div className="flex items-start gap-3">
+              <div className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-[#00A3E0] shrink-0 mt-0.5 border border-white/10">
+                <ShieldCheck className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-semibold text-white">Secure Encrypted Authentication</p>
+                <p className="text-xs text-slate-300">
+                  Industry-standard credentials protection with Supabase Auth
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-[#FF7A00] shrink-0 mt-0.5 border border-white/10">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-semibold text-white">Real-Time Order Tracking</p>
+                <p className="text-xs text-slate-300">
+                  Monitor dispatch, track shipment status, and access receipts
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-[#38BDF8] shrink-0 mt-0.5 border border-white/10">
+                <Lock className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-semibold text-white">Personalized Workspace</p>
+                <p className="text-xs text-slate-300">
+                  Saved addresses, order history, and account settings in one place
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <h2 className="text-3xl font-bold tracking-tight">Welcome to NexusIoT</h2>
-        <p className="mt-3 text-slate-200 max-w-md leading-relaxed">
-          Pakistan's professional IoT automation & commerce portal. Sign in to manage orders,
-          explore custom solutions, and access your workspace.
-        </p>
-
-        <div className="mt-8 space-y-4 text-sm text-slate-200">
-          <div className="flex items-start gap-3">
-            <ShieldCheck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold text-white">Secure Encrypted Authentication</p>
-              <p className="text-xs text-slate-300">
-                Industry-standard credentials protection with Supabase Auth
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold text-white">Real-Time Order Tracking</p>
-              <p className="text-xs text-slate-300">
-                Monitor dispatch, track shipment status, and access receipts
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <Lock className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold text-white">Personalized Workspace</p>
-              <p className="text-xs text-slate-300">
-                Saved addresses, order history, and account settings in one place
-              </p>
-            </div>
-          </div>
+        {/* Footer info in the tile */}
+        <div className="relative z-10 pt-8 border-t border-white/10 flex items-center justify-between text-xs text-slate-300">
+          <span>Best Tech, Best Future</span>
+          <span className="text-slate-400">© {new Date().getFullYear()} SmartZone</span>
         </div>
       </div>
 
       {/* Right panel — form */}
-      <div className="flex items-center justify-center px-4 py-10 sm:py-14">
+      <div className="flex items-center justify-center px-4 py-10 sm:py-14 bg-slate-50/50">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
-          <div className="flex items-center gap-2 justify-center mb-8 lg:hidden">
-            <div className="grid h-10 w-10 place-items-center rounded-md bg-primary text-primary-foreground">
-              <Cpu className="h-5 w-5" />
-            </div>
-            <span className="text-xl font-bold">NexusIoT</span>
+          <div className="flex items-center justify-center mb-6 lg:hidden">
+            <Link to="/" aria-label="SmartZone Home">
+              <SmartZoneLogo size="md" showTagline={true} />
+            </Link>
           </div>
 
           <div className="rounded-2xl border bg-card p-6 sm:p-8 shadow-[var(--shadow-elevated)]">
@@ -322,7 +361,7 @@ function Auth() {
                 <Button
                   onClick={signIn}
                   disabled={busy}
-                  className="w-full min-h-[48px] text-base font-semibold"
+                  className="w-full min-h-[48px] text-base font-semibold bg-[#FF7A00] hover:bg-[#E56E00] text-white shadow-xs transition-all"
                 >
                   {busy ? (
                     <>
@@ -338,7 +377,7 @@ function Auth() {
                   <button
                     type="button"
                     onClick={() => setActiveTab("signup")}
-                    className="text-xs text-primary font-semibold hover:underline cursor-pointer"
+                    className="text-xs text-[#0052B4] font-bold hover:underline cursor-pointer"
                   >
                     Create Account
                   </button>
@@ -398,7 +437,7 @@ function Auth() {
                 <Button
                   onClick={signUp}
                   disabled={busy}
-                  className="w-full min-h-[48px] text-base font-semibold"
+                  className="w-full min-h-[48px] text-base font-semibold bg-[#FF7A00] hover:bg-[#E56E00] text-white shadow-xs transition-all"
                 >
                   {busy ? (
                     <>
@@ -414,7 +453,7 @@ function Auth() {
                   <button
                     type="button"
                     onClick={() => setActiveTab("signin")}
-                    className="text-xs text-primary font-semibold hover:underline cursor-pointer"
+                    className="text-xs text-[#0052B4] font-bold hover:underline cursor-pointer"
                   >
                     Sign In
                   </button>
@@ -424,7 +463,7 @@ function Auth() {
           </div>
 
           <p className="text-center text-xs text-muted-foreground mt-6 leading-relaxed">
-            By signing in or creating an account, you agree to NexusIoT's Terms of Service and
+            By signing in or creating an account, you agree to SmartZone's Terms of Service and
             Privacy Policy.
           </p>
         </div>

@@ -26,7 +26,7 @@ export const ORDER_STATUS_META: Record<
   },
   delivered: {
     label: "Delivered",
-    description: "Order completed. Thank you for shopping with NexusIoT.",
+    description: "Order completed. Thank you for shopping with SmartZone.",
     step: 4,
   },
   cancelled: { label: "Cancelled", description: "This order was cancelled.", step: 0 },

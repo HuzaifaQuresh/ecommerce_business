@@ -105,7 +105,7 @@ export function ProductPurchasePanel({ product, activeVoucher }: Props) {
     const url = typeof window !== "undefined" ? window.location.href : "";
     const shareData = {
       title: product.title,
-      text: `Check out ${product.title} on NexusIoT Pakistan!`,
+      text: `Check out ${product.title} on SmartZone Pakistan!`,
       url,
     };
 
@@ -140,34 +140,36 @@ export function ProductPurchasePanel({ product, activeVoucher }: Props) {
 
   return (
     <div>
-      <div className="text-xs text-muted-foreground uppercase tracking-wide">
-        {product.manufacturer}
+      <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
+        {product.manufacturer || "SmartZone"}
       </div>
-      <h1 className="text-2xl sm:text-3xl font-bold mt-1">{product.title}</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold mt-1 text-[#0B192C]">{product.title}</h1>
       <div className="flex items-center gap-2 mt-2 text-sm">
-        <div className="flex items-center gap-1 text-warning">
+        <div className="flex items-center gap-1 text-[#F59E0B]">
           <Star className="h-4 w-4 fill-current" />
-          <span className="text-foreground font-medium">{product.rating}</span>
+          <span className="text-[#0B192C] font-bold">{product.rating}</span>
         </div>
-        <span className="text-muted-foreground">• {product.category}</span>
+        <span className="text-slate-500">• {product.category}</span>
       </div>
 
       <div className="mt-5 flex flex-wrap items-end gap-3">
-        <span className="text-3xl sm:text-4xl font-bold text-primary">
+        <span className="text-3xl sm:text-4xl font-black text-[#0B192C]">
           {fmtPKR(product.price_pkr)}
         </span>
         {original && (
           <>
-            <span className="text-lg text-muted-foreground line-through">
+            <span className="text-lg text-slate-400 line-through">
               {fmtPKR(Math.round(original))}
             </span>
-            <Badge variant="destructive">-{product.discount_pct}%</Badge>
+            <span className="bg-[#FF7A00] text-white text-xs font-bold px-2 py-0.5 rounded shadow-xs">
+              -{product.discount_pct}%
+            </span>
           </>
         )}
       </div>
 
       {activeVoucher && (
-        <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary/10 text-primary px-3 py-2 text-sm font-medium">
+        <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#FF7A00]/10 text-[#FF7A00] border border-[#FF7A00]/20 px-3 py-2 text-sm font-semibold">
           <Tag className="h-4 w-4" />
           Voucher {activeVoucher.code}: save up to{" "}
           {fmtPKR(calcVoucherDiscount(activeVoucher, product.price_pkr * qty))} at checkout
@@ -177,7 +179,7 @@ export function ProductPurchasePanel({ product, activeVoucher }: Props) {
       <div className="mt-4">
         <Badge
           variant={inStock ? "default" : "secondary"}
-          className={inStock ? "bg-emerald-600 text-white" : ""}
+          className={inStock ? "bg-emerald-600 text-white font-semibold" : ""}
         >
           {AVAILABILITY_LABEL[product.availability || "in_stock"] || "In Stock"}
           {inStock && ` • ${product.stock} available`}
@@ -186,11 +188,11 @@ export function ProductPurchasePanel({ product, activeVoucher }: Props) {
 
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-2">
         {iotMeta.map(({ icon: Icon, label, value }) => (
-          <div key={label} className="rounded-lg border bg-muted/30 p-3">
-            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-              <Icon className="h-3 w-3" /> {label}
+          <div key={label} className="rounded-lg border border-[#E2E8F0] bg-white p-3 shadow-xs">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-slate-500">
+              <Icon className="h-3 w-3 text-[#0052B4]" /> {label}
             </div>
-            <div className="text-sm font-semibold mt-1 truncate">{value}</div>
+            <div className="text-sm font-bold text-[#0B192C] mt-1 truncate">{value}</div>
           </div>
         ))}
       </div>
@@ -198,51 +200,78 @@ export function ProductPurchasePanel({ product, activeVoucher }: Props) {
       {safeTags.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">
           {safeTags.map((t) => (
-            <Badge key={t} variant="outline">
+            <Badge key={t} variant="outline" className="border-[#E2E8F0] text-slate-600">
               #{t}
             </Badge>
           ))}
         </div>
       )}
 
-      <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        <div className="inline-flex items-center border rounded-lg self-start">
-          <button
-            type="button"
-            onClick={() => setQty((q) => Math.max(1, q - 1))}
-            className="px-3 py-2 hover:bg-muted"
-          >
-            <Minus className="h-4 w-4" />
-          </button>
-          <span className="px-4 font-medium">{qty}</span>
-          <button
-            type="button"
-            onClick={() => setQty((q) => q + 1)}
-            className="px-3 py-2 hover:bg-muted"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
+      <div className="mt-6 space-y-3">
+        {/* Quantity selector row */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-slate-700">Quantity:</span>
+            <div className="inline-flex items-center border border-[#E2E8F0] bg-white rounded-xl shadow-xs h-11">
+              <button
+                type="button"
+                onClick={() => setQty((q) => Math.max(1, q - 1))}
+                className="px-3.5 h-full hover:bg-slate-100 transition-colors text-slate-600 rounded-l-xl flex items-center justify-center"
+                aria-label="Decrease quantity"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              <span className="px-4 font-bold text-[#0B192C] min-w-[2.5rem] text-center text-sm">
+                {qty}
+              </span>
+              <button
+                type="button"
+                onClick={() => setQty((q) => q + 1)}
+                className="px-3.5 h-full hover:bg-slate-100 transition-colors text-slate-600 rounded-r-xl flex items-center justify-center"
+                aria-label="Increase quantity"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {inStock ? (
+            <span className="text-xs text-emerald-700 font-semibold bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
+              {product.stock > 0 ? `${product.stock} in stock` : "In Stock"}
+            </span>
+          ) : (
+            <span className="text-xs text-rose-700 font-semibold bg-rose-50 px-3 py-1.5 rounded-full border border-rose-200">
+              Out of Stock
+            </span>
+          )}
         </div>
-        <Button
-          size="lg"
-          variant="outline"
-          disabled={!inStock}
-          onClick={() => {
-            add(cartPayload, qty);
-            toast.success(`Added ${qty} × ${product.title}`);
-          }}
-          className="flex-1 border-primary text-primary hover:bg-primary/10"
-        >
-          <ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart
-        </Button>
-        <Button
-          size="lg"
-          disabled={!inStock}
-          onClick={buyNow}
-          className="flex-1 bg-[#2563eb] hover:bg-[#1d4ed8] text-white"
-        >
-          Buy Now
-        </Button>
+
+        {/* Action Buttons: Add to Cart and Buy Now */}
+        <div className="flex flex-col sm:flex-row items-stretch gap-3 pt-1">
+          <Button
+            size="lg"
+            variant="outline"
+            disabled={!inStock}
+            onClick={() => {
+              add(cartPayload, qty);
+              toast.success(`Added ${qty} × ${product.title}`);
+            }}
+            className="flex-1 h-12 py-3.5 border-2 border-[#0052B4] text-[#0052B4] bg-white hover:bg-blue-50 font-bold rounded-xl text-sm sm:text-base transition inline-flex items-center justify-center gap-2"
+          >
+            <ShoppingCart className="h-5 w-5 shrink-0" />
+            <span>Add to Cart</span>
+          </Button>
+
+          <Button
+            size="lg"
+            disabled={!inStock}
+            onClick={buyNow}
+            className="flex-1 h-12 py-3.5 bg-[#FF7A00] hover:bg-[#E56E00] text-white font-bold rounded-xl text-sm sm:text-base shadow-md hover:shadow-lg transition inline-flex items-center justify-center gap-2 border-0"
+          >
+            <Zap className="h-5 w-5 shrink-0 fill-current" />
+            <span>Buy Now</span>
+          </Button>
+        </div>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3 text-xs">

@@ -125,7 +125,7 @@ function AdminVouchers() {
         <div>
           <Label>Code *</Label>
           <Input
-            placeholder="NEXUS10"
+            placeholder="SMART10"
             value={form.code}
             onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
             disabled={!!editTarget}

@@ -81,16 +81,6 @@ export function CategoryTreeNav({
               <ChevronRight className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 [[data-state=open]_&]:rotate-90" />
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-2 pb-1 space-y-0.5 border-l border-muted ml-2">
-              <button
-                type="button"
-                onClick={() => setCategory(node.name)}
-                className={cn(
-                  "block w-full text-left px-2 py-1.5 rounded-md hover:bg-muted text-xs text-muted-foreground",
-                  category === node.name && "bg-primary/10 text-primary font-medium",
-                )}
-              >
-                All {node.name}
-              </button>
               {node.children!.map((child) => (
                 <button
                   key={child}

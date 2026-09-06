@@ -8,7 +8,7 @@ export const DEMO_VENDOR_ID = "demo-vendor";
 export const MOCK_VOUCHERS: Voucher[] = [
   {
     id: "mock-v1",
-    code: "NEXUS10",
+    code: "SMART10",
     label: "10% off orders over PKR 5,000",
     discount_pct: 10,
     discount_flat_pkr: 0,
@@ -36,12 +36,12 @@ export const MOCK_PAYMENT_METHODS = DEFAULT_PAYMENT_METHODS;
 export const MOCK_DELIVERY_METHODS = DEFAULT_DELIVERY_METHODS;
 
 export const MOCK_SITE_SETTINGS: Record<string, unknown> = {
-  site_name: "NexusIoT",
-  contact_email: "sales@nexusiot.pk",
-  contact_phone: "+92 332 3059259",
+  site_name: "SmartZone",
+  contact_email: "sales@smartzone.pk",
+  contact_phone: "+92 51 8431111",
   tax_rate_pct: 17,
   tax_label: "Sales Tax (GST)",
-  free_shipping_min_pkr: 15000,
+  free_shipping_min_pkr: 20000,
   cod_handling_fee_pkr: 0,
   payment_methods: MOCK_PAYMENT_METHODS,
   delivery_methods: MOCK_DELIVERY_METHODS,

@@ -15,7 +15,7 @@ import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/auth/callback")({
-  head: () => ({ meta: [{ title: "Authenticating… — NexusIoT" }] }),
+  head: () => ({ meta: [{ title: "Authenticating… — SmartZone" }] }),
   component: AuthCallback,
 });
 

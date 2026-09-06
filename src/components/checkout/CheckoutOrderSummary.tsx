@@ -79,7 +79,7 @@ export function CheckoutOrderSummary({
 
       <div className="flex justify-between items-baseline font-bold text-xl border-t pt-4">
         <span>Total (PKR)</span>
-        <span className="text-primary tabular-nums">{fmtPKR(totals.total)}</span>
+        <span className="text-[#0B192C] font-black tabular-nums">{fmtPKR(totals.total)}</span>
       </div>
 
       <p className="text-[11px] text-muted-foreground leading-relaxed">

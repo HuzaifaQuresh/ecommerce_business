@@ -31,6 +31,7 @@ import {
   ChevronRight,
   Clock,
   Sparkles,
+  Check,
   type LucideIcon,
 } from "lucide-react";
 
@@ -62,6 +63,15 @@ const CAT_ICONS: Record<string, LucideIcon> = {
   Robotics: Bot,
   Sensors: Gauge,
   "Smart Home": Home,
+  "Smart Door Locks": ShieldCheck,
+  "Smart Control Panels": Layers,
+  "Smart Switches": Zap,
+  "Smart Sockets & Plugs": Plug,
+  "Smart Curtain Systems": Home,
+  "Smart Thermostats": Gauge,
+  "Smart Circuit Breakers": Zap,
+  "Smart Security Cameras": Camera,
+  "Smart Video Doorbells": Camera,
   "Smart Boards": CircuitBoard,
   Tools: Wrench,
   "Custom Boards": Cpu,
@@ -72,6 +82,25 @@ const CAT_ICONS: Record<string, LucideIcon> = {
 };
 
 const HOME_FEATURED_CATEGORIES = [
+  {
+    name: "Smart Home",
+    description:
+      "Smart locks, control panels, wall switches, sockets, curtain motors & security cameras.",
+    subs: [
+      "Smart Door Locks",
+      "Smart Control Panels",
+      "Smart Switches",
+      "Smart Sockets & Plugs",
+      "Smart Curtain Systems",
+      "Smart Thermostats",
+      "Smart Security Cameras",
+      "Smart Video Doorbells",
+    ],
+    color:
+      "from-cyan-50/10 to-primary/5 border-slate-200/60 hover:border-primary/45 hover:bg-primary/5",
+    iconBg: "bg-primary/10 text-primary border border-primary/20",
+    icon: Home,
+  },
   {
     name: "Development Boards",
     description: "Arduino, Raspberry Pi, ESP32 & AI microcontrollers.",
@@ -139,33 +168,39 @@ const HOME_FEATURED_CATEGORIES = [
 
 const BANNERS = [
   {
-    title: "MEGA IOT & ELECTRONICS",
-    subtitle: "PAKISTAN'S LARGEST CATALOG",
-    heading: "Smart Home, PLCs & Custom IoT Nodes",
-    desc: "Direct delivery across Pakistan with full technical support & testing certifications.",
-    bg: "from-slate-900 via-slate-800 to-sky-950 text-white",
-    badge: "100% Genuine Parts",
-    link: "/products",
-  },
-  {
-    title: "DEVELOPER HARDWARE",
-    subtitle: "IN STOCK NOW",
-    heading: "Original Raspberry Pi 5 & MCU Boards",
-    desc: "Complete ESP32 kits, Arduino boards, and high-frequency RF modules with code samples.",
-    bg: "from-sky-600 via-blue-500 to-primary text-white",
-    bgImage:
-      "https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?auto=format&fit=crop&w=1000&q=75&fm=webp",
-    badge: "Fast Dispatch",
-    link: "/products?category=Development Boards",
-  },
-  {
-    title: "ENTERPRISE AUTOMATION",
-    subtitle: "BULK PROCUREMENT & SOLUTIONS",
-    heading: "Siemens PLCs, HMIs & Transducers",
-    desc: "Sourcing enterprise automation with 1-Year official warranty and bulk GST invoices.",
-    bg: "from-neutral-900 via-slate-800 to-slate-900 text-white",
-    badge: "Business Pricing",
+    title: "SMARTZONE",
+    subtitle: "PAKISTAN'S PREMIER IT & AUTOMATION PARTNER",
+    heading: "We Are Best IT Services Provider For Your Business",
+    desc: "A secure and reliable IT infrastructure is essential to the success of any business. We specialize in client service and are glad to help with any IT-related issues you may have.",
+    bg: "from-[#0B192C] via-[#0F2C59] to-[#0052B4] text-white",
+    badge: "Official Distributor",
+    badgeColor: "bg-[#00A3E0]/20 text-[#00A3E0] border-[#00A3E0]/40",
     link: "/iot-solutions",
+    buttonText: "CONTACT US",
+  },
+  {
+    title: "SMART HOME & AUTOMATION",
+    subtitle: "TUYA & INDUSTRIAL SENSORS",
+    heading: "Advanced PLCs, Instrumentation & Smart Systems",
+    desc: "Transform your operations with industry 4.0 automation, wireless IoT sensors, and certified enterprise deployments.",
+    bg: "from-[#0B192C] via-[#0F2C59] to-[#0052B4] text-white",
+    bgImage:
+      "https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=1000&q=75&fm=webp",
+    badge: "Top Rated",
+    badgeColor: "bg-[#FF7A00]/20 text-[#FF7A00] border-[#FF7A00]/40",
+    link: "/products",
+    buttonText: "EXPLORE CATALOG",
+  },
+  {
+    title: "ENTERPRISE INFRASTRUCTURE",
+    subtitle: "PANEL BUILDERS & POWER SOLUTIONS",
+    heading: "Inverter Drives, Relays & Engineering Hardware",
+    desc: "Direct nationwide delivery across Pakistan with technical support, warranty, and commercial invoicing.",
+    bg: "from-[#0B192C] via-[#0F2C59] to-[#0052B4] text-white",
+    badge: "GST Invoices",
+    badgeColor: "bg-[#00A3E0]/20 text-[#00A3E0] border-[#00A3E0]/40",
+    link: "/iot-solutions",
+    buttonText: "GET A QUOTE",
   },
 ];
 
@@ -193,15 +228,15 @@ function FlashSaleTimer() {
 
   return (
     <div className="flex items-center gap-1 text-xs font-mono">
-      <span className="bg-slate-950 text-white font-bold px-2 py-1 rounded min-w-8 text-center">
+      <span className="bg-[#070F1A] text-white font-bold px-2 py-1 rounded min-w-8 text-center border border-white/10">
         {pad(timeLeft.hours)}
       </span>
       <span className="font-bold text-white">:</span>
-      <span className="bg-slate-950 text-white font-bold px-2 py-1 rounded min-w-8 text-center">
+      <span className="bg-[#070F1A] text-white font-bold px-2 py-1 rounded min-w-8 text-center border border-white/10">
         {pad(timeLeft.minutes)}
       </span>
       <span className="font-bold text-white">:</span>
-      <span className="bg-slate-950 text-white font-bold px-2 py-1 rounded min-w-8 text-center">
+      <span className="bg-[#070F1A] text-white font-bold px-2 py-1 rounded min-w-8 text-center border border-white/10">
         {pad(timeLeft.seconds)}
       </span>
     </div>
@@ -213,28 +248,28 @@ const CHANNELS = [
     label: "Flash Sale",
     desc: "Limited Hourly Offers",
     icon: Zap,
-    bg: "bg-sky-100/70 text-primary border border-sky-200/50",
+    bg: "bg-orange-50 text-[#FF7A00] border border-orange-200",
     link: "#flash-sale",
   },
   {
     label: "Safe Shipping",
     desc: "Cash on Delivery",
     icon: Truck,
-    bg: "bg-teal-50 text-teal-600 border border-teal-100",
+    bg: "bg-blue-50 text-[#0052B4] border border-blue-200",
     link: "/products",
   },
   {
     label: "B2B Bulk",
     desc: "Official Quotes & GST",
     icon: Cpu,
-    bg: "bg-sky-50 text-sky-700 border border-sky-100",
+    bg: "bg-cyan-50 text-[#00A3E0] border border-cyan-200",
     link: "/iot-solutions",
   },
   {
     label: "IoT Solutions",
     desc: "Engineering Deployments",
     icon: Factory,
-    bg: "bg-slate-100 text-slate-700 border border-slate-200",
+    bg: "bg-slate-100 text-[#0B192C] border border-slate-200",
     link: "/iot-solutions",
   },
 ];
@@ -253,10 +288,12 @@ function Index() {
             subtitle: settings?.site_name ? `${settings.site_name} EXCLUSIVE` : "STORE EXCLUSIVE",
             heading: "Next-Gen IoT & Smart Hardware",
             desc: "High-performance components and development kits with lightning-fast delivery across Pakistan.",
-            bg: "from-slate-900 via-slate-800 to-sky-950 text-white",
+            bg: "from-[#0B192C] via-[#0F2C59] to-[#0052B4] text-white",
             bgImage: customHeroBanner,
             badge: "Admin Configured",
+            badgeColor: "bg-[#00A3E0]/20 text-[#00A3E0] border-[#00A3E0]/40",
             link: "/products",
+            buttonText: "EXPLORE NOW",
           },
         ]
       : []),
@@ -297,60 +334,14 @@ function Index() {
   // Filter for Just For You (Active Items)
   const justForYouProducts = [...list].slice(0, 12);
 
-  const SIDEBAR_CATEGORIES = [
-    { name: "Development Boards", icon: CircuitBoard },
-    { name: "Components", icon: Cpu },
-    { name: "Sensors", icon: Gauge },
-    { name: "Industrial Automation", icon: Factory },
-    { name: "Robotics", icon: Bot },
-    { name: "Smart Home", icon: Home },
-    { name: "3D Printers", icon: Printer },
-  ];
-
   return (
-    <div className="bg-[#f4f4f6] min-h-screen pb-12">
-      {/* Hero Section (Daraz Split Style Layout) */}
+    <div className="bg-[#F8FAFC] min-h-screen pb-12">
+      {/* Hero Section (Full Width Banner Layout) */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-4 sm:pt-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch lg:h-[390px]">
-          {/* Left Vertical Categories Sidebar */}
-          <div className="hidden lg:flex lg:col-span-3 bg-white rounded-lg border border-slate-200/60 p-4 shadow-sm flex-col justify-between h-full">
-            <div>
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2 mb-3">
-                IoT Categories
-              </h3>
-              <div className="space-y-0.5">
-                {SIDEBAR_CATEGORIES.map((cat) => {
-                  const Icon = cat.icon;
-                  return (
-                    <Link
-                      key={cat.name}
-                      to="/products"
-                      search={{ category: cat.name } as never}
-                      className="flex items-center justify-between px-2.5 py-2 rounded-md text-slate-700 hover:text-primary hover:bg-primary/5 font-semibold text-xs sm:text-sm transition duration-150 group"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Icon className="h-4.5 w-4.5 text-slate-400 group-hover:text-primary shrink-0" />
-                        <span className="truncate">{cat.name}</span>
-                      </div>
-                      <ChevronRight className="h-3 w-3 text-slate-300 group-hover:text-primary group-hover:translate-x-0.5 transition" />
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="border-t border-slate-100 mt-2 pt-2 px-2">
-              <Link
-                to="/products"
-                className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
-              >
-                View All Categories <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Right Promotional Slider Banner */}
-          <div className="lg:col-span-9 flex flex-col h-full">
-            <div className="relative rounded-lg overflow-hidden border border-slate-200/50 shadow-sm aspect-[16/9] lg:aspect-auto h-full bg-slate-900 flex-1">
+        <div className="w-full lg:h-[390px]">
+          {/* Promotional Slider Banner */}
+          <div className="w-full flex flex-col h-full">
+            <div className="relative rounded-lg overflow-hidden border border-slate-200/50 shadow-sm aspect-[16/9] lg:aspect-auto h-full bg-[#0B192C] flex-1">
               {dynamicBanners.map((banner, index) => {
                 const isActive = index === currentSlide;
                 return (
@@ -366,7 +357,7 @@ function Index() {
                     style={
                       banner.bgImage
                         ? {
-                            backgroundImage: `linear-gradient(to right, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.7) 45%, rgba(15, 23, 42, 0.15) 100%), url(${banner.bgImage})`,
+                            backgroundImage: `linear-gradient(to right, rgba(11, 25, 44, 0.95) 0%, rgba(15, 44, 89, 0.75) 50%, rgba(0, 82, 180, 0.3) 100%), url(${banner.bgImage})`,
                             backgroundSize: "cover",
                             backgroundPosition: "center",
                           }
@@ -374,10 +365,10 @@ function Index() {
                     }
                   >
                     {/* Glowing Accent Orb */}
-                    <div className="absolute right-1/4 top-1/4 w-72 h-72 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
+                    <div className="absolute right-1/4 top-1/4 w-72 h-72 rounded-full bg-[#00A3E0]/20 blur-3xl pointer-events-none" />
 
                     {/* Tech Graphic Background Accent */}
-                    <div className="absolute right-6 top-1/2 -translate-y-1/2 w-72 h-72 hidden md:flex items-center justify-center opacity-[0.07] pointer-events-none select-none">
+                    <div className="absolute right-6 top-1/2 -translate-y-1/2 w-72 h-72 hidden md:flex items-center justify-center opacity-[0.08] pointer-events-none select-none">
                       <svg
                         className="w-full h-full text-white"
                         viewBox="0 0 100 100"
@@ -398,7 +389,13 @@ function Index() {
 
                     <div className="max-w-xl relative z-10">
                       <div className="flex items-center gap-2">
-                        <span className="bg-white/20 backdrop-blur-md text-[10px] sm:text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded text-white border border-white/10">
+                        <span
+                          className={cn(
+                            "backdrop-blur-md text-[10px] sm:text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded border",
+                            banner.badgeColor ||
+                              "bg-[#00A3E0]/20 text-[#00A3E0] border-[#00A3E0]/40",
+                          )}
+                        >
                           {banner.badge}
                         </span>
                         <span className="text-white/85 text-[10px] sm:text-xs font-bold tracking-wider uppercase">
@@ -415,10 +412,11 @@ function Index() {
                         <Button
                           asChild
                           size="sm"
-                          className="bg-white hover:bg-slate-50 text-slate-900 font-bold px-5 sm:px-6 shadow-md hover:-translate-y-0.5 transition"
+                          className="bg-[#FF7A00] hover:bg-[#E56E00] text-white font-bold px-6 sm:px-8 py-2.5 rounded-md shadow-lg hover:-translate-y-0.5 transition uppercase tracking-wider text-xs sm:text-sm border-0"
                         >
                           <Link to={banner.link}>
-                            Shop Now <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                            {banner.buttonText || "Shop Now"}{" "}
+                            <ArrowRight className="ml-2 h-4 w-4" />
                           </Link>
                         </Button>
                       </div>
@@ -489,15 +487,15 @@ function Index() {
 
       {/* FLASH SALE Section (Daraz Ticking Style) */}
       <section id="flash-sale" className="mx-auto max-w-7xl px-4 sm:px-6 mt-6">
-        <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg border border-[#E2E8F0] shadow-xs overflow-hidden">
           {/* Flash Sale Header */}
-          <div className="bg-gradient-to-r from-sky-600 via-primary to-blue-600 px-4 py-3 sm:py-4 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="bg-[#0B192C] border-b border-[#0F2C59] px-4 py-3 sm:py-4 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-              <div className="flex items-center gap-1.5 font-black text-sm sm:text-lg tracking-tight uppercase italic bg-white text-primary px-3 py-1 rounded shadow-sm">
+              <div className="flex items-center gap-1.5 font-black text-sm sm:text-lg tracking-tight uppercase italic bg-[#FF7A00] text-white px-3 py-1 rounded shadow-xs">
                 <Zap className="h-4 w-4 sm:h-5 sm:w-5 fill-current animate-bounce" /> FLASH SALE
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-sky-50 hidden sm:inline">
+                <span className="text-xs font-bold text-slate-300 hidden sm:inline">
                   ON SALE NOW | ENDING IN:
                 </span>
                 <FlashSaleTimer />
@@ -507,7 +505,7 @@ function Index() {
               asChild
               variant="secondary"
               size="sm"
-              className="bg-white/15 hover:bg-white/25 text-white border border-white/20 font-bold shrink-0"
+              className="bg-white/10 hover:bg-[#FF7A00] hover:text-white text-slate-200 border border-white/20 font-bold shrink-0 transition"
             >
               <Link to="/products">SHOP ALL DEALS →</Link>
             </Button>
@@ -530,13 +528,13 @@ function Index() {
 
       {/* Shop By Category Section */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-6">
-        <div className="bg-white rounded-lg border border-slate-200/60 p-4 sm:p-5 shadow-sm">
+        <div className="bg-white rounded-lg border border-[#E2E8F0] p-4 sm:p-5 shadow-xs">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
             <div>
-              <span className="inline-flex items-center gap-1.5 text-[9px] font-bold text-primary uppercase tracking-wider bg-primary/10 px-2.5 py-0.5 rounded-full">
-                <Sparkles className="h-3 w-3" /> Sourced & Insured
+              <span className="inline-flex items-center gap-1.5 text-[9px] font-bold text-[#FF7A00] uppercase tracking-wider bg-[#FF7A00]/10 px-2.5 py-0.5 rounded-full">
+                <Sparkles className="h-3 w-3" /> Certified & Tested
               </span>
-              <h2 className="text-base sm:text-xl font-black text-slate-950 mt-1 tracking-tight">
+              <h2 className="text-base sm:text-xl font-black text-[#0B192C] mt-1 tracking-tight">
                 Shop By Category
               </h2>
             </div>
@@ -544,7 +542,7 @@ function Index() {
               asChild
               variant="ghost"
               size="sm"
-              className="text-primary hover:text-primary/80 hover:bg-primary/5 text-xs font-bold self-start sm:self-auto -ml-3 sm:ml-0"
+              className="text-[#0052B4] hover:text-[#0052B4]/80 hover:bg-blue-50 text-xs font-bold self-start sm:self-auto -ml-3 sm:ml-0"
             >
               <Link to="/products">View All Departments →</Link>
             </Button>
@@ -558,16 +556,16 @@ function Index() {
                   key={cat.name}
                   to="/products"
                   search={{ category: cat.name } as never}
-                  className="group relative flex items-center gap-3 bg-slate-50/40 hover:bg-primary/5 border border-slate-200/50 rounded-xl p-3 shadow-sm hover:shadow-md hover:border-primary/40 transition-all duration-300"
+                  className="group relative flex items-center gap-3 bg-slate-50/40 hover:bg-[#0052B4]/5 border border-[#E2E8F0] rounded-xl p-3 shadow-xs hover:shadow-md hover:border-[#0052B4]/40 transition-all duration-300"
                 >
-                  <div className="p-2.5 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300 shrink-0">
+                  <div className="p-2.5 rounded-lg bg-[#0052B4]/10 text-[#0052B4] group-hover:bg-[#0052B4] group-hover:text-white transition-all duration-300 shrink-0">
                     <Icon className="h-4.5 w-4.5" strokeWidth={2} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-xs font-bold text-slate-800 group-hover:text-primary transition-colors leading-snug line-clamp-2">
+                    <h3 className="text-xs font-bold text-[#0B192C] group-hover:text-[#0052B4] transition-colors leading-snug line-clamp-2">
                       {cat.name}
                     </h3>
-                    <span className="text-[9px] text-slate-400 group-hover:text-primary/90 font-bold tracking-wider uppercase mt-0.5 block transition-colors">
+                    <span className="text-[9px] text-slate-400 group-hover:text-[#0052B4] font-bold tracking-wider uppercase mt-0.5 block transition-colors">
                       Browse →
                     </span>
                   </div>
@@ -578,18 +576,106 @@ function Index() {
         </div>
       </section>
 
+      {/* About SmartZone Section */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-8">
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-6 sm:p-10 shadow-xs overflow-hidden relative">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            <div className="lg:col-span-7 space-y-5">
+              <div>
+                <span className="text-[#FF7A00] text-xs sm:text-sm font-black uppercase tracking-widest block mb-2">
+                  ABOUT SMARTZONE
+                </span>
+                <h2 className="text-2xl sm:text-4xl font-black text-[#0B192C] tracking-tight leading-tight">
+                  Years of Experience in Providing{" "}
+                  <span className="relative inline-block text-[#0B192C] border-b-4 border-[#FF7A00] pb-0.5">
+                    IT Solutions
+                  </span>
+                </h2>
+              </div>
+              <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
+                Having served customers for over a decade, SmartZone has established itself as
+                Pakistan&apos;s leading IT services provider, offering comprehensive, integrated
+                solutions across a wide range of IT-related disciplines.
+              </p>
+
+              {/* 6 Key Capabilities Checklist */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+                {[
+                  "Supply of hardware & software",
+                  "24/7 Support",
+                  "Remote maintenance",
+                  "IT-Monitoring",
+                  "Fast on-site service",
+                  "Quick Tips and Advice",
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-3">
+                    <div className="h-6 w-6 rounded-full bg-[#0052B4] text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <Check className="h-3.5 w-3.5 stroke-[3]" />
+                    </div>
+                    <span className="text-xs sm:text-sm font-semibold text-[#0B192C]">{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-3">
+                <Button
+                  asChild
+                  size="lg"
+                  className="bg-[#FF7A00] hover:bg-[#E56E00] text-white font-bold px-8 py-3 rounded-md shadow-md hover:shadow-lg transition-all tracking-wider uppercase text-xs sm:text-sm border-0"
+                >
+                  <Link to="/iot-solutions">MORE ABOUT US</Link>
+                </Button>
+              </div>
+            </div>
+
+            <div className="lg:col-span-5 relative">
+              <div className="relative rounded-2xl overflow-hidden shadow-xl border border-[#0F2C59] bg-[#0B192C] aspect-4/3 flex items-center justify-center p-6 text-white group">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#0052B4]/40 via-[#0F2C59]/90 to-[#0B192C] z-0" />
+                <img
+                  src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=80"
+                  alt="SmartZone IT and Automation"
+                  className="absolute inset-0 w-full h-full object-cover mix-blend-luminosity opacity-35 group-hover:scale-105 transition-transform duration-700"
+                />
+                <div className="relative z-10 space-y-4 text-center">
+                  <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#FF7A00] text-white shadow-xl mx-auto ring-4 ring-[#FF7A00]/30">
+                    <Cpu className="h-8 w-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                      World Class Tech & Support
+                    </h3>
+                    <p className="text-xs text-slate-300 max-w-xs mx-auto leading-relaxed">
+                      Custom tailored industrial computing, sensors, network gateways, and server
+                      racks for modern enterprises.
+                    </p>
+                  </div>
+                  <div className="flex justify-center gap-3 text-[11px] font-bold text-slate-300 pt-1">
+                    <span className="bg-[#00A3E0]/20 text-[#00A3E0] px-2.5 py-1 rounded-full border border-[#00A3E0]/30">
+                      10+ Yrs Exp
+                    </span>
+                    <span className="bg-[#FF7A00]/20 text-[#FF7A00] px-2.5 py-1 rounded-full border border-[#FF7A00]/30">
+                      Nationwide
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Just For You (Main Catalog Recommendation Section) */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg sm:text-2xl font-black text-slate-950 tracking-tight uppercase">
+            <h2 className="text-lg sm:text-2xl font-black text-[#0B192C] tracking-tight uppercase">
               Just For You
             </h2>
             <p className="text-slate-500 text-xs">Based on popular demand in Pakistan.</p>
           </div>
           <Link
             to="/products"
-            className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+            className="text-xs font-bold text-[#0052B4] hover:underline flex items-center gap-1"
           >
             See All Catalog <ChevronRight className="h-4 w-4" />
           </Link>

@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/setup")({
-  head: () => ({ meta: [{ title: "Platform Setup — NexusIoT" }] }),
+  head: () => ({ meta: [{ title: "Platform Setup — SmartZone" }] }),
   component: Setup,
 });
 

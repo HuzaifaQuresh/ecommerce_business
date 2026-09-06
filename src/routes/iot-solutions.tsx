@@ -35,12 +35,13 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PageContainer } from "@/components/site/PageLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { AnprGateConsole } from "@/components/site/AnprGateConsole";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/iot-solutions")({
   head: () => ({
     meta: [
-      { title: "Enterprise & Smart Home IoT Solutions — NexusIoT" },
+      { title: "Enterprise & Smart Home IoT Solutions — SmartZone" },
       {
         name: "description",
         content:
@@ -175,7 +176,7 @@ function ConsultationForm({
       }
       setDone(true);
     } catch {
-      toast.error("Could not submit — please email us directly at sales@nexusiot.pk");
+      toast.error("Could not submit — please email us directly at sales@smartzone.pk");
     } finally {
       setBusy(false);
     }
@@ -342,7 +343,7 @@ function Solutions() {
                 Intelligent Living: Smart Home Environments
               </h2>
               <p className="text-slate-600 leading-relaxed">
-                Step into a modern lifestyle where your environment works with you. NexusIoT crafts
+                Step into a modern lifestyle where your environment works with you. SmartZone crafts
                 world-class residential smart setups designed for Pakistan's luxury residences. Keep
                 your space beautifully illuminated, climate-optimized, and totally secure.
               </p>
@@ -448,7 +449,7 @@ function Solutions() {
                 Enterprise & Residential Security Systems
               </h2>
               <p className="text-slate-600 leading-relaxed">
-                Legacy security only records crimes; NexusIoT active solutions deter them before
+                Legacy security only records crimes; SmartZone active solutions deter them before
                 they occur. Connect intelligent cameras, biometric smart deadbolts, and
                 environmental detectors into a unified safety shield.
               </p>
@@ -556,6 +557,21 @@ function Solutions() {
       <section className="py-16 sm:py-24 bg-slate-50 border-t border-slate-100">
         <PageContainer>
           <div className="text-center max-w-3xl mx-auto space-y-4 mb-14">
+            <span className="text-xs font-bold text-primary uppercase tracking-widest">
+              Smart Gate & Barrier Operations
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+              AI Number Plate Recognition & Guard Console
+            </h2>
+            <p className="text-slate-600">
+              Test real-time ANPR OCR threshold locking, manual guard corrections, misread flagging,
+              and audit trail retention.
+            </p>
+          </div>
+
+          <AnprGateConsole />
+
+          <div className="text-center max-w-3xl mx-auto space-y-4 mb-14 mt-20">
             <span className="text-xs font-bold text-primary uppercase tracking-widest">
               Deployable Packages
             </span>

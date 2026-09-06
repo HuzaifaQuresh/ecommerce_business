@@ -39,10 +39,11 @@ export const Route = createFileRoute("/products/")({
     }),
   head: () => ({
     meta: [
-      { title: "Shop IoT Hardware & Tuya Sensors — NexusIoT" },
+      { title: "Shop Smart Hardware, Tuya IoT & Security — SmartZone" },
       {
         name: "description",
-        content: "Browse cameras, sensors, gateways, dev boards and industrial automation gear.",
+        content:
+          "Browse smart locks, control panels, switches, cameras, sensors and automation hardware.",
       },
     ],
   }),
@@ -133,40 +134,42 @@ function ProductsPage() {
 
   return (
     <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 py-6 sm:py-8">
-      <div className="mb-4 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold">
-          {category
-            ? isTopLevelCategory(category)
-              ? category
-              : `${getParentCategory(category)} — ${category}`
-            : "All Products"}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {q ? (
-            <>
-              Results for "<span className="text-foreground font-medium">{q}</span>" —{" "}
-            </>
-          ) : null}
-          {filtered.length} item{filtered.length !== 1 && "s"}
-        </p>
-      </div>
-
-      <ProductCategoryChips category={category} q={q} className="mb-4" />
-
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,260px)_1fr] gap-6 lg:gap-8">
         <aside className="hidden lg:block lg:sticky lg:top-32 lg:self-start lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
           <ProductFiltersPanel {...filterPanelProps} />
         </aside>
 
         <div className="min-w-0">
-          <div className="mb-4 flex flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
+          <ProductCategoryChips category={category} q={q} className="mb-4 sm:hidden" />
+
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border bg-card p-3 sm:p-4">
+            <div className="flex items-center gap-3">
               <ProductFiltersMobileSheet
                 {...filterPanelProps}
                 open={filtersOpen}
                 onOpenChange={setFiltersOpen}
               />
-              <div className="flex items-center gap-1 rounded-md border p-0.5">
+              <div>
+                <h1 className="text-base sm:text-lg font-bold leading-tight">
+                  {category
+                    ? isTopLevelCategory(category)
+                      ? category
+                      : `${getParentCategory(category)} — ${category}`
+                    : "All Products"}
+                </h1>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {q ? (
+                    <>
+                      Results for "<span className="text-foreground font-medium">{q}</span>" —{" "}
+                    </>
+                  ) : null}
+                  {filtered.length} product{filtered.length !== 1 && "s"} found
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1 rounded-md border p-0.5 bg-background">
                 <Button
                   size="icon"
                   variant={view === "grid" ? "default" : "ghost"}
@@ -186,16 +189,14 @@ function ProductsPage() {
                   <List className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <span className="text-sm text-muted-foreground shrink-0">Sort</span>
+
               <Select
                 value={sort ?? "position"}
                 onValueChange={(v) =>
                   navigate({ to: "/products", search: { q, category, sort: v as typeof sort } })
                 }
               >
-                <SelectTrigger className="w-full sm:w-44">
+                <SelectTrigger className="w-full sm:w-44 h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

@@ -4,72 +4,19 @@ import {
   saveServerProductFn,
   deleteServerProductFn,
 } from "@/api/server-products";
+import { TUYA_PRODUCTS } from "@/lib/tuya-catalog-data";
 
-/** Small demo catalog when Supabase is empty — not a full fill, just enough to browse. */
+/** Base maker & industrial automation catalog */
 const IMG = "https://images.unsplash.com/photo-1518770660439-4636190af475?w=600";
 const IMG2 = "https://images.unsplash.com/photo-1581092335397-9583eb92d232?w=600";
 const IMG3 = "https://images.unsplash.com/photo-1558002038-1055907df827?w=600";
 
-const STATIC_MOCK_PRODUCTS: ProductRow[] = [
-  {
-    id: "mock-1",
-    title: "Tuya Zigbee Motion Sensor PIR",
-    slug: "tuya-zigbee-pir",
-    description: "Battery PIR motion sensor with Zigbee 3.0 mesh.",
-    category: "Temperature Sensors",
-    price_pkr: 1850,
-    stock: 120,
-    image_url: IMG2,
-    manufacturer: "Tuya",
-    color: "White",
-    availability: "in_stock",
-    discount_pct: 25,
-    tags: ["sensor", "zigbee"],
-    rating: 4.5,
-    gallery_urls: [
-      "https://images.unsplash.com/photo-1581092335397-9583eb92d232?w=600",
-      "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=600",
-    ],
-    specs: {
-      protocol: "Zigbee 3.0",
-      power: "3V (2× AAA)",
-      ecosystem: "Tuya Smart / Smart Life",
-      "Working Temperature": "-10°C to 55°C",
-      "Detection Range": "Up to 8 meters",
-    },
-  },
-  {
-    id: "mock-2",
-    title: "Tuya Smart Wi-Fi Dome Camera 4MP",
-    slug: "tuya-wifi-dome-4mp",
-    description: "Indoor dome camera with night vision and app alerts.",
-    category: "Smart Cameras",
-    price_pkr: 8500,
-    stock: 42,
-    image_url: IMG3,
-    manufacturer: "Tuya",
-    color: "White",
-    availability: "in_stock",
-    discount_pct: 15,
-    tags: ["camera", "wifi"],
-    rating: 4.6,
-    gallery_urls: [
-      "https://images.unsplash.com/photo-1558002038-1055907df827?w=600",
-      "https://images.unsplash.com/photo-1551808525-51a94da548ce?w=600",
-    ],
-    specs: {
-      protocol: "Wi-Fi 2.4GHz",
-      power: "12V DC / 1A Adapter",
-      ecosystem: "Tuya Smart / Smart Life",
-      Resolution: "2560 x 1440 (4MP)",
-      "Night Vision": "IR Cut Up to 15m",
-    },
-  },
+const BASE_HARDWARE_PRODUCTS: ProductRow[] = [
   {
     id: "mock-3",
-    title: "Raspberry Pi 5 — 8GB",
+    title: "Raspberry Pi 5 8GB Single Board Computer - Linux/WiFi",
     slug: "raspberry-pi-5-8gb",
-    description: "Quad-core ARM Cortex-A76, 8GB RAM.",
+    description: "Quad-core ARM Cortex-A76, 8GB RAM for edge AI & industrial IoT.",
     category: "Raspberry Pi",
     price_pkr: 32000,
     stock: 18,
@@ -78,7 +25,7 @@ const STATIC_MOCK_PRODUCTS: ProductRow[] = [
     color: "Green",
     availability: "in_stock",
     discount_pct: 0,
-    tags: ["sbc"],
+    tags: ["sbc", "raspberry pi", "edge ai"],
     rating: 4.9,
     gallery_urls: [
       "https://images.unsplash.com/photo-1518770660439-4636190af475?w=600",
@@ -94,9 +41,9 @@ const STATIC_MOCK_PRODUCTS: ProductRow[] = [
   },
   {
     id: "mock-4",
-    title: "ESP32-WROOM-32 DevKit",
+    title: "Espressif ESP32-WROOM-32D Development Board - WiFi/BLE",
     slug: "esp32-wroom-devkit",
-    description: "Wi-Fi + BLE MCU for IoT prototyping.",
+    description: "Wi-Fi + BLE dual-core MCU for smart IoT prototyping.",
     category: "ESP32 / MCU Boards",
     price_pkr: 1450,
     stock: 200,
@@ -105,7 +52,7 @@ const STATIC_MOCK_PRODUCTS: ProductRow[] = [
     color: "Black",
     availability: "in_stock",
     discount_pct: 20,
-    tags: ["esp32"],
+    tags: ["esp32", "microcontroller", "iot"],
     rating: 4.8,
     gallery_urls: [],
     specs: {
@@ -118,9 +65,9 @@ const STATIC_MOCK_PRODUCTS: ProductRow[] = [
   },
   {
     id: "mock-5",
-    title: "8-Channel Relay Module",
+    title: "SmartZone 8-Channel Isolated Relay Board - 5V/10A",
     slug: "relay-8ch-opto",
-    description: "10A relay board with optocoupler isolation.",
+    description: "10A relay board with optical isolation for PLC & Arduino automation.",
     category: "Connectors",
     price_pkr: 1450,
     stock: 85,
@@ -129,7 +76,7 @@ const STATIC_MOCK_PRODUCTS: ProductRow[] = [
     color: "Blue",
     availability: "in_stock",
     discount_pct: 0,
-    tags: ["relay"],
+    tags: ["relay", "automation"],
     rating: 4.5,
     gallery_urls: [],
     specs: {
@@ -141,9 +88,9 @@ const STATIC_MOCK_PRODUCTS: ProductRow[] = [
   },
   {
     id: "mock-6",
-    title: "Siemens S7-1200 CPU 1214C",
+    title: "Siemens S7-1200 CPU 1214C Programmable Logic Controller - PROFINET",
     slug: "siemens-s7-1200",
-    description: "Compact PLC for industrial automation.",
+    description: "Compact high-reliability PLC for factory & manufacturing automation.",
     category: "Programmable Logic Controller (PLC)",
     price_pkr: 145000,
     stock: 5,
@@ -152,35 +99,17 @@ const STATIC_MOCK_PRODUCTS: ProductRow[] = [
     color: "Gray",
     availability: "in_stock",
     discount_pct: 0,
-    tags: ["plc"],
+    tags: ["plc", "siemens", "industrial"],
     rating: 4.9,
     gallery_urls: [],
     specs: {},
     vendor_id: "demo-vendor",
   },
   {
-    id: "mock-7",
-    title: "Tuya Zigbee Gateway Hub Pro",
-    slug: "tuya-zigbee-gateway-pro",
-    description: "Zigbee 3.0 hub for up to 128 devices.",
-    category: "Gateways",
-    price_pkr: 7900,
-    stock: 32,
-    image_url: IMG3,
-    manufacturer: "Tuya",
-    color: "Black",
-    availability: "in_stock",
-    discount_pct: 12,
-    tags: ["gateway"],
-    rating: 4.7,
-    gallery_urls: [],
-    specs: {},
-  },
-  {
     id: "mock-8",
-    title: "Creality Ender 3 V3 SE",
+    title: "Creality Ender 3 V3 SE High-Speed 3D Printer - FDM",
     slug: "creality-ender-3-v3",
-    description: "Entry-level FDM 3D printer.",
+    description: "Precision FDM 3D printer with auto-bed leveling for rapid prototyping.",
     category: "3D Printer",
     price_pkr: 89000,
     stock: 8,
@@ -189,16 +118,16 @@ const STATIC_MOCK_PRODUCTS: ProductRow[] = [
     color: "Black",
     availability: "in_stock",
     discount_pct: 8,
-    tags: ["3d"],
+    tags: ["3d", "printer", "prototyping"],
     rating: 4.4,
     gallery_urls: [],
     specs: {},
   },
   {
     id: "mock-9",
-    title: "UNI-T Digital Multimeter",
+    title: "UNI-T UT61E+ True RMS Digital Multimeter - Industrial",
     slug: "uni-t-multimeter",
-    description: "True RMS bench-friendly DMM.",
+    description: "True RMS professional digital multimeter with capacitance & frequency test.",
     category: "Multimeters",
     price_pkr: 12500,
     stock: 24,
@@ -207,16 +136,16 @@ const STATIC_MOCK_PRODUCTS: ProductRow[] = [
     color: "Yellow",
     availability: "in_stock",
     discount_pct: 5,
-    tags: ["tool"],
+    tags: ["tool", "meter", "electronics"],
     rating: 4.6,
     gallery_urls: [],
     specs: {},
   },
   {
     id: "mock-10",
-    title: "NEMA 17 Stepper Motor",
+    title: "SmartZone NEMA 17 1.8-Degree High-Torque Stepper Motor - 2-Phase",
     slug: "nema-17-stepper",
-    description: "1.8° stepper for CNC and robotics.",
+    description: "1.8° precision bipolar stepper motor for 3D printers and CNC machines.",
     category: "Motors",
     price_pkr: 3200,
     stock: 60,
@@ -225,7 +154,7 @@ const STATIC_MOCK_PRODUCTS: ProductRow[] = [
     color: "Black",
     availability: "in_stock",
     discount_pct: 10,
-    tags: ["motor"],
+    tags: ["motor", "stepper", "cnc"],
     rating: 4.3,
     gallery_urls: [],
     specs: {},
@@ -233,9 +162,9 @@ const STATIC_MOCK_PRODUCTS: ProductRow[] = [
   },
   {
     id: "mock-11",
-    title: "Mean Well 24V 10A PSU",
+    title: "MeanWell NDR-240-24 24V 10A DIN-Rail Power Supply - Industrial",
     slug: "meanwell-24v-10a",
-    description: "Industrial DIN-rail power supply.",
+    description: "High-efficiency industrial DIN-rail power supply with short circuit protection.",
     category: "DC Power Supplies",
     price_pkr: 9800,
     stock: 40,
@@ -244,40 +173,50 @@ const STATIC_MOCK_PRODUCTS: ProductRow[] = [
     color: "Silver",
     availability: "in_stock",
     discount_pct: 0,
-    tags: ["psu"],
+    tags: ["psu", "power supply", "industrial"],
     rating: 4.7,
-    gallery_urls: [],
-    specs: {},
-  },
-  {
-    id: "mock-12",
-    title: "4-Gang Smart Wi-Fi Switch",
-    slug: "wifi-switch-4gang",
-    description: "Glass touch wall switch, neutral required.",
-    category: "Smart Switch",
-    price_pkr: 5400,
-    stock: 55,
-    image_url: IMG3,
-    manufacturer: "Tuya",
-    color: "Black",
-    availability: "in_stock",
-    discount_pct: 10,
-    tags: ["switch"],
-    rating: 4.5,
     gallery_urls: [],
     specs: {},
   },
 ];
 
+export const STATIC_MOCK_PRODUCTS: ProductRow[] = [...TUYA_PRODUCTS, ...BASE_HARDWARE_PRODUCTS];
+
 export const MOCK_PRODUCTS: ProductRow[] = [...STATIC_MOCK_PRODUCTS];
 
 const isBrowser = typeof window !== "undefined";
+const CATALOG_STORAGE_VERSION = "smartzone_v4_standardized_titles";
 
 let isLoadedFromLocalStorage = false;
 export function initializeMockProductsOnClient(force = false) {
   if (!isBrowser) return;
   if (isLoadedFromLocalStorage && !force) return;
   try {
+    const currentVersion = localStorage.getItem("smartzone_catalog_version");
+    if (currentVersion !== CATALOG_STORAGE_VERSION || force) {
+      // Migrate / refresh to complete official catalogue while preserving user-created items
+      const val = localStorage.getItem("nexus_local_products");
+      let customUserProducts: ProductRow[] = [];
+      if (val) {
+        try {
+          const parsed = JSON.parse(val);
+          if (Array.isArray(parsed)) {
+            customUserProducts = parsed.filter(
+              (p: ProductRow) =>
+                p.id?.startsWith("user-") || (p.vendor_id && p.vendor_id !== "demo-vendor"),
+            );
+          }
+        } catch {}
+      }
+      const combined = [...customUserProducts, ...STATIC_MOCK_PRODUCTS];
+      MOCK_PRODUCTS.length = 0;
+      MOCK_PRODUCTS.push(...combined);
+      localStorage.setItem("nexus_local_products", JSON.stringify(combined));
+      localStorage.setItem("smartzone_catalog_version", CATALOG_STORAGE_VERSION);
+      isLoadedFromLocalStorage = true;
+      return;
+    }
+
     const val = localStorage.getItem("nexus_local_products");
     if (val) {
       const parsed = JSON.parse(val);
@@ -286,7 +225,6 @@ export function initializeMockProductsOnClient(force = false) {
         MOCK_PRODUCTS.push(...parsed);
       }
     } else {
-      // Initialize with default static products in local storage
       localStorage.setItem("nexus_local_products", JSON.stringify(STATIC_MOCK_PRODUCTS));
     }
     isLoadedFromLocalStorage = true;

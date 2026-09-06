@@ -58,7 +58,7 @@ export const DEFAULT_DELIVERY_METHODS: DeliveryMethod[] = [
   {
     id: "pickup",
     label: "Warehouse Pickup",
-    description: "NexusIoT Islamabad office — bring order confirmation",
+    description: "SmartZone Islamabad office — bring order confirmation",
     eta: "Same day (business hours)",
     charge_pkr: 0,
     enabled: true,
