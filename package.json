@@ -1,7 +1,9 @@
 {
   "name": "nexusiot",
   "private": true,
-  "sideEffects": ["./src/lib/error-capture.ts"],
+  "sideEffects": [
+    "./src/lib/error-capture.ts"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite dev",
@@ -10,6 +12,8 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "start": "node server.js",
+    "deploy": "npm run build && wrangler deploy",
+    "cf-typegen": "wrangler types",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
@@ -96,7 +100,8 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "wrangler": "^4.129.0"
   },
   "optionalDependencies": {
     "@rollup/rollup-win32-x64-msvc": "^4.60.4",
