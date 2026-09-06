@@ -8,6 +8,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+# Cloudflare Workers Builds ships Bun 1.2.15 and cannot parse bun.lock v2
+bun.lock
 dist
 dist-ssr
 .output
