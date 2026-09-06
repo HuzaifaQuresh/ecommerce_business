@@ -1,7 +1,7 @@
 {
   "name": "nexusiot",
   "private": true,
-  "sideEffects": false,
+  "sideEffects": ["./src/lib/error-capture.ts"],
   "type": "module",
   "scripts": {
     "dev": "vite dev",
@@ -94,7 +94,6 @@
     "postcss": "^8.5.3",
     "prettier": "^3.7.3",
     "tailwindcss-animate": "^1.0.7",
-    "tailwindcss-v3": "npm:tailwindcss@3.4.17",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1"
