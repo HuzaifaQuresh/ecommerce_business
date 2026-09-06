@@ -1,6 +1,7 @@
 {
   "name": "nexusiot",
   "private": true,
+  "packageManager": "bun@1.4.2",
   "sideEffects": ["./src/lib/error-capture.ts"],
   "type": "module",
   "scripts": {
