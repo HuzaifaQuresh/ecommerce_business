@@ -60,7 +60,7 @@ function VendorDashboard() {
         const productIds = vendorProductsList.map((p) => p.id);
         const allOrders = await fetchOrdersWithItems();
         const vendorOrders = allOrders.filter((o) =>
-          o.items.some((item) => item.product_id && productIds.includes(item.product_id)),
+          (o.items ?? []).some((item) => item.product_id && productIds.includes(item.product_id)),
         );
         orderCount = vendorOrders.length;
       } catch (err) {

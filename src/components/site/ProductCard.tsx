@@ -69,11 +69,10 @@ export const ProductCard = React.memo(function ProductCard({
       image_url: p.image_url,
       slug: productSlug,
     });
-    toast.success("Added to cart");
   };
 
   // Generate a mock but stable rating and review count based on the product ID hash for consistency
-  const stableHash = p.id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const stableHash = String(p.id ?? p.slug ?? "").split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const ratingValue = p.rating ?? 4.0 + (stableHash % 10) / 10; // 4.0 to 4.9
   const reviewCount = 5 + (stableHash % 145); // 5 to 149 reviews
 
@@ -93,7 +92,7 @@ export const ProductCard = React.memo(function ProductCard({
             loading={priority ? "eager" : "lazy"}
             decoding="async"
             fetchPriority={priority ? "high" : "low"}
-            className="h-full w-full object-cover group-hover:scale-105 transition duration-500"
+            className="h-full w-full object-contain object-center group-hover:scale-105 transition duration-500"
           />
           {p.discount_pct > 0 && (
             <span className="absolute top-1.5 left-1.5 bg-[#FF7A00] text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-xs">
@@ -175,7 +174,7 @@ export const ProductCard = React.memo(function ProductCard({
           loading={priority ? "eager" : "lazy"}
           decoding="async"
           fetchPriority={priority ? "high" : "low"}
-          className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition duration-500"
+          className="absolute inset-0 h-full w-full object-contain object-center group-hover:scale-105 transition duration-500"
         />
         {p.discount_pct > 0 && (
           <span className="absolute top-2 left-2 bg-[#FF7A00] text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded shadow-xs">

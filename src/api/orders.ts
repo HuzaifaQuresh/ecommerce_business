@@ -1,15 +1,44 @@
-import { supabase } from "@/integrations/supabase/client";
+import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 import { estimateDeliveryDate } from "@/lib/order-fulfillment";
 import { getMockOrderWithItems, MOCK_ORDERS_WITH_ITEMS, MOCK_ORDERS } from "@/lib/mock-data";
 import type { ItemFulfillmentStatus, OrderStatus } from "@/lib/order-fulfillment";
-import type { OrderRow, OrderWithItems } from "@/types/commerce";
+import type { OrderItemRow, OrderRow, OrderWithItems } from "@/types/commerce";
+
+function isDemoOrderId(id: string | undefined) {
+  return Boolean(id && id.startsWith("mock-order-"));
+}
+
+function asOrderItems(value: unknown): OrderItemRow[] {
+  return Array.isArray(value) ? (value as OrderItemRow[]) : [];
+}
+
+function asOrderWithItems(row: OrderRow & { items?: unknown; order_items?: unknown }): OrderWithItems {
+  const { order_items, items, ...order } = row;
+  return {
+    ...(order as OrderRow),
+    items: asOrderItems(items ?? order_items),
+  };
+}
+
+function toErrorMessage(err: unknown, fallback: string) {
+  if (err && typeof err === "object" && "message" in err) {
+    const message = String((err as { message?: string }).message || "").trim();
+    if (message) return message;
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
+}
 
 // Helper functions for Local Storage persistence fallback
 function getLocalOrders(): OrderWithItems[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem("nexus_local_orders");
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((row: OrderRow & { items?: unknown; order_items?: unknown }) =>
+      asOrderWithItems(row),
+    );
   } catch {
     return [];
   }
@@ -51,8 +80,9 @@ export async function fetchOrders(opts?: { userId?: string; email?: string }) {
     if (error) throw error;
 
     const dbOrders = (data ?? []) as OrderRow[];
-    const merged = [...filteredLocal];
+    const merged = [...filteredLocal.filter((o) => !isDemoOrderId(o.id))];
     for (const dbo of dbOrders) {
+      if (isDemoOrderId(dbo.id)) continue;
       if (!merged.some((o) => o.id === dbo.id)) {
         merged.push(dbo);
       }
@@ -60,6 +90,9 @@ export async function fetchOrders(opts?: { userId?: string; email?: string }) {
     merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     return merged;
   } catch {
+    if (isSupabaseConfigured()) {
+      return filteredLocal.filter((o) => !isDemoOrderId(o.id));
+    }
     const merged = [...filteredLocal];
     for (const mo of MOCK_ORDERS) {
       const matchUserId = searchUserId
@@ -96,11 +129,12 @@ export async function fetchOrderWithItems(orderId: string): Promise<OrderWithIte
         .eq("order_id", cleanId)
         .order("title");
       if (iErr) throw iErr;
-      return { ...(order as OrderRow), items: items ?? [] };
+      return asOrderWithItems({ ...(order as OrderRow), items: items ?? [] });
     }
   } catch (err) {
     console.warn("Failed to fetch order from Supabase:", err);
   }
+  if (isSupabaseConfigured()) return null;
   return getMockOrderWithItems(cleanId);
 }
 
@@ -109,19 +143,63 @@ export async function fetchOrdersWithItems(opts?: {
   email?: string;
 }): Promise<OrderWithItems[]> {
   const isFiltered = Boolean(opts?.userId || opts?.email);
+  const searchUserId = opts?.userId?.trim();
+  const searchEmail = opts?.email?.trim().toLowerCase();
+  const local = getLocalOrders();
+  const filteredLocal = local.filter((o) => {
+    if (!searchUserId && !searchEmail) return true;
+    const matchUser = Boolean(searchUserId && o.user_id === searchUserId);
+    const matchEmail = Boolean(searchEmail && o.email?.toLowerCase() === searchEmail);
+    return matchUser || matchEmail;
+  });
+
   try {
-    const orders = await fetchOrders(opts);
-    if (!orders.length) {
-      return isFiltered ? [] : MOCK_ORDERS_WITH_ITEMS;
+    let q = supabase
+      .from("orders")
+      .select("*, order_items(*)")
+      .order("created_at", { ascending: false });
+    if (searchUserId && searchEmail) {
+      q = q.or(`user_id.eq.${searchUserId},email.ilike.${searchEmail}`);
+    } else if (searchUserId) {
+      q = q.eq("user_id", searchUserId);
+    } else if (searchEmail) {
+      q = q.ilike("email", searchEmail);
     }
-    const out: OrderWithItems[] = [];
-    for (const o of orders) {
-      const full = await fetchOrderWithItems(o.id);
-      if (full) out.push(full);
+
+    const { data, error } = await q;
+    if (error) throw error;
+
+    const fromDb: OrderWithItems[] = (data ?? []).flatMap((row) => {
+      const record = row as OrderRow & { order_items?: unknown; items?: unknown };
+      if (isDemoOrderId(record.id)) return [];
+      return [asOrderWithItems(record)];
+    });
+
+    const merged = [...filteredLocal.filter((o) => !isDemoOrderId(o.id))];
+    for (const dbo of fromDb) {
+      const existing = merged.findIndex((o) => o.id === dbo.id);
+      if (existing === -1) merged.push(dbo);
+      else if (!merged[existing].items.length && dbo.items.length) merged[existing] = dbo;
     }
-    return out.length ? out : isFiltered ? [] : MOCK_ORDERS_WITH_ITEMS;
+    merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    if (merged.length) return merged;
+    return isFiltered || isSupabaseConfigured() ? [] : MOCK_ORDERS_WITH_ITEMS;
   } catch {
-    return isFiltered ? [] : MOCK_ORDERS_WITH_ITEMS;
+    try {
+      const orders = await fetchOrders(opts);
+      if (!orders.length) {
+        return isFiltered || isSupabaseConfigured() ? [] : MOCK_ORDERS_WITH_ITEMS;
+      }
+      const out: OrderWithItems[] = [];
+      for (const o of orders) {
+        const full = await fetchOrderWithItems(o.id);
+        if (full) out.push(full);
+      }
+      if (out.length) return out;
+    } catch {
+      /* fall through */
+    }
+    return isFiltered || isSupabaseConfigured() ? [] : MOCK_ORDERS_WITH_ITEMS;
   }
 }
 
@@ -164,14 +242,38 @@ export async function placeOrder(input: {
   const orderedAt = new Date();
   const expected = estimateDeliveryDate(delivery_method ?? "standard", orderedAt);
 
-  const sanitizedUserId = order.user_id && isUUID(order.user_id) ? order.user_id : null;
+  const {
+    data: { user: sessionUser },
+  } = await supabase.auth.getUser();
+  if (!sessionUser) {
+    throw new Error("Sign in is required to complete your order.");
+  }
+  const sanitizedUserId = isUUID(sessionUser.id) ? sessionUser.id : null;
+  if (!sanitizedUserId) {
+    throw new Error("Sign in is required to complete your order.");
+  }
 
   try {
     const { data: created, error } = await supabase
       .from("orders")
       .insert({
-        ...order,
+        customer_name: order.customer_name,
+        email: order.email,
+        phone: order.phone,
+        address: order.address,
+        city: order.city,
+        province: order.province ?? null,
+        postal_code: order.postal_code ?? null,
+        landmark: order.landmark ?? null,
+        total_pkr: order.total_pkr,
+        subtotal_pkr: order.subtotal_pkr ?? order.total_pkr,
+        shipping_pkr: order.shipping_pkr ?? 0,
+        tax_pkr: order.tax_pkr ?? 0,
+        payment_fee_pkr: order.payment_fee_pkr ?? 0,
         delivery_method: delivery_method ?? "standard",
+        discount_pkr: order.discount_pkr ?? 0,
+        voucher_code: order.voucher_code ?? null,
+        payment_method: order.payment_method,
         user_id: sanitizedUserId,
         expected_delivery_at: expected.toISOString(),
         status: "pending",
@@ -182,7 +284,7 @@ export async function placeOrder(input: {
 
     const { error: e2 } = await supabase.from("order_items").insert(
       items.map((i) => ({
-        product_id: i.product_id && isUUID(i.product_id) ? i.product_id : null,
+        product_id: i.product_id || null,
         title: i.title,
         price_pkr: i.price_pkr,
         quantity: i.quantity,
@@ -221,7 +323,7 @@ export async function placeOrder(input: {
       items: items.map((i, index) => ({
         id: `item-${created.id}-${index}`,
         order_id: created.id,
-        product_id: i.product_id && isUUID(i.product_id) ? i.product_id : null,
+        product_id: i.product_id || null,
         title: i.title,
         price_pkr: i.price_pkr,
         quantity: i.quantity,
@@ -235,6 +337,10 @@ export async function placeOrder(input: {
 
     return created as OrderRow;
   } catch (err) {
+    if (isSupabaseConfigured()) {
+      console.error("placeOrder failed:", err);
+      throw new Error(toErrorMessage(err, "Could not place your order. Please try again."));
+    }
     console.warn("Supabase placeOrder failed, falling back to local storage:", err);
 
     const createdId = "ord-" + Math.random().toString(36).substring(2, 11).toUpperCase();
@@ -267,7 +373,7 @@ export async function placeOrder(input: {
     const createdItems = items.map((i, index) => ({
       id: `item-${createdId}-${index}`,
       order_id: createdId,
-      product_id: i.product_id && isUUID(i.product_id) ? i.product_id : null,
+      product_id: i.product_id || null,
       title: i.title,
       price_pkr: i.price_pkr,
       quantity: i.quantity,
@@ -340,7 +446,7 @@ export async function updateOrderItemFulfillment(
   const localList = getLocalOrders();
   let found = false;
   for (const o of localList) {
-    const itemIdx = o.items.findIndex((i) => i.id === itemId);
+    const itemIdx = asOrderItems(o.items).findIndex((i) => i.id === itemId);
     if (itemIdx !== -1) {
       o.items[itemIdx].fulfillment_status = fulfillment_status;
       if (fulfillment_status === "dispatched" || fulfillment_status === "in_transit") {

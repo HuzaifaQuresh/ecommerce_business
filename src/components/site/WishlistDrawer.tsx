@@ -5,7 +5,6 @@ import { useCart } from "@/contexts/CartContext";
 import { fmtPKR } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { toast } from "sonner";
 import { optimizeProductImageUrl } from "@/lib/product-image";
 
 export function WishlistDrawer() {
@@ -13,6 +12,7 @@ export function WishlistDrawer() {
   const { add } = useCart();
 
   const handleAddToCart = (i: (typeof items)[0]) => {
+    setDrawerOpen(false);
     add({
       id: i.id,
       title: i.title,
@@ -20,7 +20,6 @@ export function WishlistDrawer() {
       image_url: i.image_url,
       slug: i.slug,
     });
-    toast.success(`Added "${i.title}" to cart`);
   };
 
   return (

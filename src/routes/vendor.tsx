@@ -3,21 +3,39 @@ import { supabase } from "@/integrations/supabase/client";
 import { DashboardShell, type NavItem } from "@/components/dashboard/DashboardShell";
 import { LayoutDashboard, Package, ShoppingBag, BarChart3, Store } from "lucide-react";
 import type { AppRole } from "@/types/commerce";
+import { isPublicVendorPath } from "@/lib/vendor-onboarding";
+import { loadUserRoles } from "@/lib/auth-roles";
+
+export type VendorLayoutContext = {
+  vendorId: string | null;
+  shopName: string;
+  roles: AppRole[];
+  email: string | undefined;
+  publicPortal: boolean;
+};
 
 export const Route = createFileRoute("/vendor")({
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }): Promise<VendorLayoutContext> => {
+    const publicPortal = isPublicVendorPath(location.pathname);
+    if (typeof window === "undefined" || publicPortal) {
+      return {
+        vendorId: null,
+        shopName: publicPortal ? "Seller Center" : "Vendor Workspace",
+        roles: [],
+        email: undefined,
+        publicPortal,
+      };
+    }
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    if (!session) throw redirect({ to: "/auth" });
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", session.user.id);
-    const list = (roles ?? []).map((r) => r.role as AppRole);
+    if (!session) throw redirect({ to: "/vendor/auth", search: { tab: "signin" } });
+    const list = await loadUserRoles(session.user.id, session.user.email);
     const isVendor = list.includes("vendor");
     const isStaff = list.some((r) => r === "admin" || r === "super_admin");
-    if (!isVendor && !isStaff) throw redirect({ to: "/" });
+    if (!isVendor && !isStaff) {
+      throw redirect({ to: "/vendor/auth", search: { tab: "signin" } });
+    }
     const { data: vendor } = await supabase
       .from("vendors")
       .select("id,shop_name")
@@ -28,6 +46,7 @@ export const Route = createFileRoute("/vendor")({
       shopName: vendor?.shop_name ?? "Vendor Workspace",
       roles: list,
       email: session.user.email,
+      publicPortal: false,
     };
   },
   component: VendorLayout,
@@ -42,7 +61,8 @@ const NAV: NavItem[] = [
 ];
 
 function VendorLayout() {
-  const { shopName, roles, email } = Route.useRouteContext();
+  const { shopName, roles, email, publicPortal } = Route.useRouteContext();
+  if (publicPortal) return <Outlet />;
   return (
     <DashboardShell
       title={shopName}

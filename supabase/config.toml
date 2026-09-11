@@ -1,1 +1,31 @@
-project_id = "dypyvfuscpuzhrvrmebk"
+project_id = "sperknmkbyrbmebipnfq"
+
+[auth]
+site_url = "https://smartzone.pk"
+additional_redirect_urls = [
+  "https://smartzone.pk/auth/callback",
+  "https://smartzone.pk/auth/reset-password",
+  "https://smartzone.pk/auth/verify-email",
+  "https://smartzone.pk/**",
+  "http://localhost:3000/auth/callback",
+  "http://localhost:3000/auth/reset-password",
+  "http://localhost:3000/auth/verify-email",
+  "http://localhost:3000/**",
+]
+
+[auth.email]
+enable_confirmations = true
+
+[auth.email.template.recovery]
+subject = "Your SmartZone password reset code"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.confirmation]
+subject = "Confirm your SmartZone email"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.external.google]
+enabled = true
+client_id = "env(GOOGLE_CLIENT_ID)"
+secret = "env(GOOGLE_CLIENT_SECRET)"
+skip_nonce_check = true

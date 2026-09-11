@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /account
+Disallow: /account/
+Disallow: /auth
+Disallow: /auth/
+Disallow: /vendor
+Disallow: /vendor/
+Disallow: /checkout
+Disallow: /cart
+Disallow: /setup
+Disallow: /403
+
+# Cloudflare may prepend Content-Signal rules on the custom domain.
+# Keep Sitemap declared for Search Console.
+
+Sitemap: https://smartzone.pk/sitemap.xml

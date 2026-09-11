@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { fetchProducts } from "@/api/products";
+import { catalogListKey } from "@/lib/catalog-version";
+import { categorySeo } from "@/lib/seo";
 import { ProductCard, type Product } from "@/components/site/ProductCard";
 import {
   ProductCategoryChips,
@@ -19,47 +21,86 @@ import {
 } from "@/components/ui/select";
 import { Grid3x3, List } from "lucide-react";
 import { getParentCategory, isTopLevelCategory } from "@/lib/format";
+import { PageBackButton } from "@/components/site/PageLayout";
 
 const searchSchema = z.object({
   q: z.string().optional(),
   category: z.string().optional(),
+  brand: z.string().optional(),
   sort: z.enum(["position", "name", "price-asc", "price-desc", "rating"]).optional(),
 });
+
+const PAGE_SIZE = 24;
 
 export const Route = createFileRoute("/products/")({
   validateSearch: searchSchema,
   loaderDeps: ({ search: { category } }) => ({ category }),
   loader: ({ context: { queryClient }, deps: { category } }) =>
     queryClient.ensureQueryData({
-      queryKey: ["products", category],
+      queryKey: catalogListKey(category),
+      staleTime: 60_000,
       queryFn: async () => {
-        const data = await fetchProducts({ category });
+        const data = await fetchProducts({ category, limit: PAGE_SIZE });
         return data as (Product & { color?: string | null })[];
       },
     }),
-  head: () => ({
-    meta: [
-      { title: "Shop Smart Hardware, Tuya IoT & Security — SmartZone" },
-      {
-        name: "description",
-        content:
-          "Browse smart locks, control panels, switches, cameras, sensors and automation hardware.",
-      },
-    ],
-  }),
+  head: ({ match }) => {
+    const category = typeof match.search.category === "string" ? match.search.category : "";
+    const brand = typeof match.search.brand === "string" ? match.search.brand : "";
+    const mapped = category ? categorySeo(category) : null;
+    const focus = [brand, category].filter(Boolean).join(" ") || "Smart Hardware, Tuya IoT & CCTV";
+    const title =
+      mapped?.title ||
+      (category || brand
+        ? `${focus} in Pakistan | SmartZone`
+        : "IoT Devices & Smart Home Sensors Pakistan | SmartZone");
+    const description =
+      mapped?.description ||
+      (category || brand
+        ? `Shop ${focus} online at SmartZone Pakistan (smartzone.pk). Smart home, Zigbee/WiFi sensors, and industrial IoT with COD.`
+        : "Buy IoT devices, Zigbee sensors, WiFi & MQTT sensors, Tuya sensors and smart home automations in Pakistan at smartzone.pk.");
+    const canonicalPath =
+      category && !brand
+        ? `/products?category=${encodeURIComponent(category)}`
+        : "/products";
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        {
+          name: "keywords",
+          content:
+            "smartzone, smartzone pk, iot sensor, smart home, zigbee sensors, automations, MQTT sensors, wifi sensors, tuya sensor Pakistan, iot devices Pakistan",
+        },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:url", content: `https://smartzone.pk${canonicalPath}` },
+        ...(brand || match.search.q || match.search.sort
+          ? [{ name: "robots", content: "noindex,follow" }]
+          : []),
+      ],
+      links: [{ rel: "canonical", href: `https://smartzone.pk${canonicalPath}` }],
+    };
+  },
   component: ProductsPage,
 });
 
 function ProductsPage() {
-  const { q, category, sort } = Route.useSearch();
+  const { q, category, sort, brand } = Route.useSearch();
   const navigate = useNavigate();
   const loaderData = Route.useLoaderData();
+  const queryClient = useQueryClient();
 
   const [view, setView] = useState<"grid" | "list">("grid");
   const [price, setPrice] = useState<[number, number]>([0, 1500000]);
   const [avail, setAvail] = useState<string>("all");
-  const [manufacturers, setManufacturers] = useState<string[]>([]);
+  const [manufacturers, setManufacturers] = useState<string[]>(() => (brand ? [brand] : []));
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  useEffect(() => {
+    if (brand) setManufacturers([brand]);
+  }, [brand]);
 
   const filterState = useMemo(
     () => ({ price, avail, manufacturers }),
@@ -67,13 +108,36 @@ function ProductsPage() {
   );
 
   const { data: products, isLoading } = useQuery({
-    queryKey: ["products", category],
+    queryKey: catalogListKey(category),
     queryFn: async () => {
       const data = await fetchProducts({ category });
       return data as (Product & { color?: string | null })[];
     },
     initialData: loaderData,
+    staleTime: 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
+
+  useEffect(() => {
+    const loadFullCatalog = () => {
+      void queryClient.prefetchQuery({
+        queryKey: catalogListKey(category),
+        queryFn: async () => {
+          const data = await fetchProducts({ category });
+          return data as (Product & { color?: string | null })[];
+        },
+      });
+    };
+    const idle =
+      typeof requestIdleCallback === "function"
+        ? requestIdleCallback(loadFullCatalog, { timeout: 1800 })
+        : window.setTimeout(loadFullCatalog, 400);
+    return () => {
+      if (typeof cancelIdleCallback === "function") cancelIdleCallback(idle as number);
+      else clearTimeout(idle as number);
+    };
+  }, [category, queryClient]);
 
   const allManufacturers = useMemo(
     () =>
@@ -114,6 +178,13 @@ function ProductsPage() {
     });
   }, [products, q, price, avail, manufacturers, sort]);
 
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [q, category, sort, brand, price, avail, manufacturers]);
+
+  const visible = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
+
   const reset = () => {
     setPrice([0, 1500000]);
     setAvail("all");
@@ -144,6 +215,7 @@ function ProductsPage() {
 
           <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border bg-card p-3 sm:p-4">
             <div className="flex items-center gap-3">
+              <PageBackButton />
               <ProductFiltersMobileSheet
                 {...filterPanelProps}
                 open={filtersOpen}
@@ -193,7 +265,10 @@ function ProductsPage() {
               <Select
                 value={sort ?? "position"}
                 onValueChange={(v) =>
-                  navigate({ to: "/products", search: { q, category, sort: v as typeof sort } })
+                  navigate({
+                    to: "/products",
+                    search: { q, category, brand, sort: v as typeof sort },
+                  })
                 }
               >
                 <SelectTrigger className="w-full sm:w-44 h-9">
@@ -210,7 +285,7 @@ function ProductsPage() {
             </div>
           </div>
 
-          {isLoading ? (
+          {isLoading && !products?.length ? (
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="h-64 sm:h-72 rounded-lg bg-muted animate-pulse" />
@@ -224,17 +299,43 @@ function ProductsPage() {
               </Button>
             </div>
           ) : view === "grid" ? (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-              {filtered.map((p) => (
-                <ProductCard key={p.id} p={p} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                {visible.map((p, idx) => (
+                  <ProductCard key={p.id} p={p} priority={idx < 6} />
+                ))}
+              </div>
+              {hasMore ? (
+                <div className="mt-6 flex justify-center">
+                  <Button
+                    variant="outline"
+                    className="font-bold"
+                    onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+                  >
+                    Load more ({filtered.length - visible.length} remaining)
+                  </Button>
+                </div>
+              ) : null}
+            </>
           ) : (
-            <div className="grid grid-cols-1 gap-3">
-              {filtered.map((p) => (
-                <ProductCard key={p.id} p={p} view="list" />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 gap-3">
+                {visible.map((p, idx) => (
+                  <ProductCard key={p.id} p={p} view="list" priority={idx < 4} />
+                ))}
+              </div>
+              {hasMore ? (
+                <div className="mt-6 flex justify-center">
+                  <Button
+                    variant="outline"
+                    className="font-bold"
+                    onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+                  >
+                    Load more ({filtered.length - visible.length} remaining)
+                  </Button>
+                </div>
+              ) : null}
+            </>
           )}
         </div>
       </div>

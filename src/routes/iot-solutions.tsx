@@ -1,25 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useEffect, useState, type FormEvent } from "react";
 import {
-  Radio,
-  Flame,
-  Tv,
-  Factory,
-  Truck,
-  Building2,
   ArrowRight,
   Send,
   CheckCircle2,
-  Home,
-  ShieldCheck,
-  Lock,
-  Video,
-  Bell,
-  Zap,
-  Thermometer,
-  Droplets,
-  Sliders,
-  Sparkles,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,109 +17,50 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PageContainer } from "@/components/site/PageLayout";
-import { supabase } from "@/integrations/supabase/client";
-import { AnprGateConsole } from "@/components/site/AnprGateConsole";
+import { IotAboutVisual, IotSolutionBands, IotSolutionsHeroBackdrop } from "@/components/site/IotSolutionBands";
+import { HomeSectionBadge, HomeSectionHeader } from "@/components/site/HomeSectionHeader";
+import { submitInboxLead } from "@/api/inbox";
+import { ADDON_SUITES, SOLUTIONS } from "@/lib/solutions";
 import { toast } from "sonner";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import {
+  contactEmailFromSettings,
+  officeAddressFromSettings,
+} from "@/lib/storefront-contact";
 
 export const Route = createFileRoute("/iot-solutions")({
   head: () => ({
     meta: [
-      { title: "Enterprise & Smart Home IoT Solutions — SmartZone" },
+      {
+        title: "IoT Solutions & Smart Home Automations Pakistan | SmartZone",
+      },
       {
         name: "description",
         content:
-          "Advanced smart home automation, security solutions, intelligent sensors, and enterprise IoT package deployments.",
+          "SmartZone IoT solutions — smart home automations, Zigbee/WiFi/MQTT sensors, Tuya installs, CCTV and industrial IoT in Islamabad & Pakistan. Book a survey on smartzone.pk.",
       },
+      {
+        name: "keywords",
+        content:
+          "smartzone, smartzone pk, iot sensor, smart home, zigbee sensors, automations, MQTT sensors, wifi sensors, tuya sensor Pakistan, iot devices Pakistan",
+      },
+      {
+        property: "og:title",
+        content: "IoT Solutions & Smart Home Automations Pakistan | SmartZone",
+      },
+      {
+        property: "og:description",
+        content:
+          "Custom IoT installs for homes, offices, and industry — sensors, automations, and hardware from smartzone.pk.",
+      },
+      { property: "og:url", content: "https://smartzone.pk/iot-solutions" },
     ],
+    links: [{ rel: "canonical", href: "https://smartzone.pk/iot-solutions" }],
   }),
   component: Solutions,
 });
-
-const SOLUTIONS = [
-  {
-    icon: Home,
-    title: "Whole-Home Smart Automation",
-    desc: "Unify lighting, climate, entertainment, and motorized shades into a single voice & smartphone interface.",
-    tags: ["Zigbee 3.0", "Tuya Cloud", "Apple HomeKit & Google Home"],
-  },
-  {
-    icon: ShieldCheck,
-    title: "Active Security & Surveillance",
-    desc: "AI-powered cameras with real-time human detection, smart locks, and immediate local siren/SMS alerts.",
-    tags: ["2K CCTV", "Smart Deadbolts", "Intrusion Detection"],
-  },
-  {
-    icon: Flame,
-    title: "Integrated Fire & Gas Safety Smoke Cloud",
-    desc: "Industrial-grade gas leakage and photoelectric smoke detectors wired to an automatic gas cutoff system.",
-    tags: ["Solenoid Valves", "LPG/NG Gas Sensors", "Instant SMS Alerts"],
-  },
-  {
-    icon: Radio,
-    title: "Remote Telecom Tower Surveillance",
-    desc: "4G/LoRa-backed PTZ + intrusion + power monitoring across unmanned tower sites.",
-    tags: ["PTZ", "LoRaWAN", "Power Sensors"],
-  },
-  {
-    icon: Factory,
-    title: "Industrial SCADA & PLC Integration",
-    desc: "Siemens / Weintek stacks integrated with custom dashboards and edge gateways.",
-    tags: ["PLC", "SCADA", "Modbus"],
-  },
-  {
-    icon: Truck,
-    title: "Fleet & Cold-Chain Telemetry",
-    desc: "GPS + temperature loggers with geofencing and tamper alerts.",
-    tags: ["GPS", "Telemetry"],
-  },
-];
-
-const SENSORS_CATALOG = [
-  {
-    icon: Flame,
-    name: "Tuya Smart Smoke Detector",
-    tech: "Photoelectric Sensor",
-    use: "Detects slow-smoldering fires and sounds an 85dB alarm, simultaneously triggering mobile push and SMS notifications.",
-    color: "bg-red-50 text-red-600 border-red-100",
-  },
-  {
-    icon: Droplets,
-    name: "Gas Leakage & LPG Detector",
-    tech: "Catalytic Combustion",
-    use: "Continuously monitors LPG/Methane levels and automatically commands a smart valve to cut off the main gas line.",
-    color: "bg-orange-50 text-orange-600 border-orange-100",
-  },
-  {
-    icon: Thermometer,
-    name: "Precision Climate Multi-Sensor",
-    tech: "Sensirion SHT30",
-    use: "Highly accurate temperature, humidity, and ambient lux monitoring to trigger intelligent AC, heater, and smart blind routines.",
-    color: "bg-blue-50 text-blue-600 border-blue-100",
-  },
-  {
-    icon: Zap,
-    name: "Intelligent Power Monitor",
-    tech: "Bi-directional CT Clamp",
-    use: "Monitors real-time voltage, current, and accumulated kWh of your entire home or facility with full diagnostic analytics.",
-    color: "bg-amber-50 text-amber-600 border-amber-100",
-  },
-  {
-    icon: Lock,
-    name: "Zigbee Door & Window Contact",
-    tech: "Magnetic Reed Switch",
-    use: "Super low-latency entry monitoring. Triggers welcoming lights during the day, and activates instant sirens during security arm state.",
-    color: "bg-emerald-50 text-emerald-600 border-emerald-100",
-  },
-  {
-    icon: Video,
-    name: "AI Human-Detection PIR Sensor",
-    tech: "Passive Infrared + Thermal",
-    use: "Avoids false alerts from pets or light shifts. Recognizes warm human motion to activate cameras and sirens.",
-    color: "bg-purple-50 text-purple-600 border-purple-100",
-  },
-];
 
 const EMPTY = {
   name: "",
@@ -145,38 +71,52 @@ const EMPTY = {
   message: "",
 };
 
+const STACK = ["Hikvision", "Dahua", "ZKTeco", "Tuya", "Siemens", "NVIDIA Jetson"];
+
 function ConsultationForm({
   defaultSolution = "",
   onClose,
+  compact,
+  idPrefix = "iot",
 }: {
   defaultSolution?: string;
-  onClose: () => void;
+  onClose?: () => void;
+  compact?: boolean;
+  idPrefix?: string;
 }) {
+  const { data: settings } = useSiteSettings();
+  const contactEmail = contactEmailFromSettings(settings);
   const [form, setForm] = useState({ ...EMPTY, solution: defaultSolution });
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
 
-  const handleSubmit = async () => {
-    if (!form.name.trim() || !form.email.trim() || !form.solution) {
+  useEffect(() => {
+    setForm((prev) => ({ ...prev, solution: defaultSolution || prev.solution }));
+  }, [defaultSolution]);
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!form.name.trim() || !form.email.trim() || !form.email.includes("@") || !form.solution) {
       toast.error("Name, email, and solution are required");
       return;
     }
     setBusy(true);
     try {
-      const { error } = await supabase.from("site_settings").upsert({
-        key: `lead_${Date.now()}`,
-        value: JSON.stringify({
-          type: "consultation",
-          ...form,
-          submitted_at: new Date().toISOString(),
-        }),
+      await submitInboxLead({
+        data: {
+          source: "iot_lead",
+          name: form.name.trim(),
+          email: form.email.trim(),
+          subject: form.solution || "IoT consultation",
+          message: form.message.trim() || "Please contact me about this IoT solution.",
+          company: form.company.trim(),
+          phone: form.phone.trim(),
+          solution: form.solution,
+        },
       });
-      if (error) {
-        console.warn("Lead save failed:", error.message);
-      }
       setDone(true);
     } catch {
-      toast.error("Could not submit — please email us directly at sales@smartzone.pk");
+      toast.error(`Could not submit. Email ${contactEmail} or use WhatsApp.`);
     } finally {
       setBusy(false);
     }
@@ -184,51 +124,78 @@ function ConsultationForm({
 
   if (done) {
     return (
-      <div className="flex flex-col items-center justify-center py-10 text-center">
-        <CheckCircle2 className="h-14 w-14 text-emerald-600 mb-4" />
-        <h3 className="text-xl font-bold">Request received!</h3>
-        <p className="text-muted-foreground mt-2 max-w-xs">
-          Our team will contact you at <strong>{form.email}</strong> within 24 hours.
+      <div className="flex flex-col items-center justify-center py-8 text-center">
+        <CheckCircle2 className="mb-4 h-14 w-14 text-emerald-600" />
+        <h3 className="text-xl font-bold text-[#0B192C]">Request received</h3>
+        <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+          We will contact <strong className="text-foreground">{form.email}</strong>
+          {form.phone ? ` / ${form.phone}` : ""} within one business day.
         </p>
-        <Button className="mt-6" onClick={onClose}>
-          Close
-        </Button>
+        {onClose ? (
+          <Button className="mt-6 min-h-[44px] bg-[#0B192C] hover:bg-[#0F2C59]" onClick={onClose}>
+            Close
+          </Button>
+        ) : (
+          <Button
+            className="mt-6 min-h-[44px] bg-[#0B192C] hover:bg-[#0F2C59]"
+            onClick={() => {
+              setDone(false);
+              setForm({ ...EMPTY });
+            }}
+          >
+            Send another request
+          </Button>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid sm:grid-cols-2 gap-3">
+    <form className="space-y-4" onSubmit={(e) => void handleSubmit(e)}>
+      <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <Label>Full name *</Label>
+          <Label htmlFor={`${idPrefix}-name`}>Full name *</Label>
           <Input
+            id={`${idPrefix}-name`}
+            autoComplete="name"
             placeholder="Muhammad Huzaifa"
+            className="mt-1.5 min-h-[44px]"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
+            required
           />
         </div>
         <div>
-          <Label>Company / Organization</Label>
+          <Label htmlFor={`${idPrefix}-company`}>Company / site</Label>
           <Input
-            placeholder="Homeowner or Enterprise Name"
+            id={`${idPrefix}-company`}
+            placeholder="Residence, society, or plant name"
+            className="mt-1.5 min-h-[44px]"
             value={form.company}
             onChange={(e) => setForm({ ...form, company: e.target.value })}
           />
         </div>
         <div>
-          <Label>Email *</Label>
+          <Label htmlFor={`${idPrefix}-email`}>Email *</Label>
           <Input
+            id={`${idPrefix}-email`}
             type="email"
-            placeholder="you@example.com"
+            autoComplete="email"
+            placeholder="you@company.com"
+            className="mt-1.5 min-h-[44px]"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
+            required
           />
         </div>
         <div>
-          <Label>Phone</Label>
+          <Label htmlFor={`${idPrefix}-phone`}>Phone / WhatsApp</Label>
           <Input
+            id={`${idPrefix}-phone`}
+            type="tel"
+            autoComplete="tel"
             placeholder="+92 332 3059259"
+            className="mt-1.5 min-h-[44px]"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
           />
@@ -237,7 +204,7 @@ function ConsultationForm({
       <div>
         <Label>Solution of interest *</Label>
         <Select value={form.solution} onValueChange={(v) => setForm({ ...form, solution: v })}>
-          <SelectTrigger>
+          <SelectTrigger className="mt-1.5 min-h-[44px]">
             <SelectValue placeholder="Select a solution…" />
           </SelectTrigger>
           <SelectContent>
@@ -246,375 +213,206 @@ function ConsultationForm({
                 {s.title}
               </SelectItem>
             ))}
-            <SelectItem value="Custom">Custom / Other IoT Project</SelectItem>
+            {ADDON_SUITES.filter((s) => !SOLUTIONS.some((p) => p.title === s.title)).map((s) => (
+              <SelectItem key={s.title} value={s.title}>
+                {s.title}
+              </SelectItem>
+            ))}
+            <SelectItem value="Custom">Custom / other IoT project</SelectItem>
           </SelectContent>
         </Select>
       </div>
       <div>
-        <Label>Project brief & requirements</Label>
+        <Label htmlFor={`${idPrefix}-brief`}>Project brief</Label>
         <Textarea
-          placeholder="Briefly describe your home size, specific security concerns, or scale of enterprise deployment..."
-          rows={4}
+          id={`${idPrefix}-brief`}
+          placeholder="Site size, cameras/gates needed, PLC make, or timeline…"
+          rows={compact ? 3 : 4}
+          className="mt-1.5"
           value={form.message}
           onChange={(e) => setForm({ ...form, message: e.target.value })}
         />
       </div>
-      <Button className="w-full min-h-[48px]" onClick={handleSubmit} disabled={busy}>
+      <Button type="submit" className="w-full min-h-[48px] bg-[#FF7A00] hover:bg-[#E56E00] text-white" disabled={busy}>
         {busy ? (
           "Submitting…"
         ) : (
           <>
-            <Send className="h-4 w-4 mr-2" />
-            Request consultation
+            <Send className="mr-2 h-4 w-4" />
+            Request a site survey
           </>
         )}
       </Button>
-    </div>
+    </form>
   );
 }
 
+function scrollToHash(hash: string) {
+  const id = hash.replace(/^#/, "");
+  if (!id) return;
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function Solutions() {
+  const navigate = useNavigate();
+  const hash = useRouterState({ select: (s) => s.location.hash });
+  const { data: settings } = useSiteSettings();
+  const contactEmail = contactEmailFromSettings(settings);
+  const officeAddress = officeAddressFromSettings(settings);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedSolution, setSelectedSolution] = useState("");
+
+  useEffect(() => {
+    if (!hash) return;
+    const t = window.setTimeout(() => scrollToHash(hash), 80);
+    return () => window.clearTimeout(t);
+  }, [hash]);
 
   const openQuote = (title = "") => {
     setSelectedSolution(title);
     setDialogOpen(true);
   };
 
+  const goToSiteSurvey = () => {
+    openQuote();
+    void navigate({ to: "/iot-solutions", hash: "quote", replace: true });
+    window.setTimeout(() => scrollToHash("quote"), 100);
+  };
+
   return (
     <>
-      {/* Immersive Hero Header */}
-      <section className="relative overflow-hidden bg-slate-950 text-white py-16 sm:py-24">
-        {/* Ambient Dark Tech Background Image overlay */}
-        <div className="absolute inset-0 z-0 opacity-45">
-          <img
-            src="https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=1600&q=80"
-            alt="Smart Home Tech Background"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent" />
-        </div>
-
-        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="max-w-3xl">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-primary/20 text-primary border border-primary/30 mb-6">
-              <Sparkles className="h-3 w-3 animate-pulse" /> Custom IoT Engineering
-            </span>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1]">
-              Smart Home & <br />
-              <span className="text-primary">Enterprise IoT</span> Solutions
-            </h1>
-            <p className="mt-6 text-lg sm:text-xl text-slate-300 leading-relaxed max-w-2xl">
-              From sophisticated villa automation systems with voice controls, to nationwide remote
-              telecom tower surveillance — we engineer custom intelligent environments that are
-              secure, efficient, and beautifully responsive.
-            </p>
-            <div className="mt-10 flex flex-wrap gap-4">
-              <Button
-                size="lg"
-                className="bg-primary hover:bg-primary/90 text-white min-h-[48px] px-8 text-base shadow-lg shadow-primary/20"
-                onClick={() => openQuote("Whole-Home Smart Automation")}
+      <section className="relative min-h-[420px] overflow-hidden bg-[#071018] text-white sm:min-h-[500px]">
+        <IotSolutionsHeroBackdrop />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 sm:h-64 bg-gradient-to-t from-[#0B192C]/92 via-[#0B192C]/40 to-transparent" />
+        <div className="relative z-10 mx-auto flex min-h-[420px] max-w-7xl flex-col justify-end px-4 py-16 sm:min-h-[500px] sm:px-6 sm:py-20">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF7A00]">
+            Engineering deployments · Islamabad / Rawalpindi · Nationwide
+          </p>
+          <h1 className="mt-4 max-w-3xl text-4xl font-extrabold leading-[1.12] tracking-tight sm:text-5xl">
+            IoT, CCTV and industrial automation — designed, installed, supported
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+            SmartZone is a working command-center practice: Tuya smart home, Hikvision/Dahua
+            surveillance, ANPR barriers, ZKTeco access, and PLC/SCADA on the shop floor. Hardware
+            from the catalog, commissioning by our engineers.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button
+              size="lg"
+              className="min-h-[48px] bg-[#FF7A00] px-6 text-white hover:bg-[#E56E00]"
+              onClick={goToSiteSurvey}
+            >
+              Request a site survey <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="min-h-[48px] border-white/25 bg-white/5 px-6 text-white hover:bg-white/10 hover:text-white"
+              asChild
+            >
+              <Link to="/products" search={{ category: "IoT Solutions" }}>
+                Shop IoT hardware
+              </Link>
+            </Button>
+          </div>
+          <div className="mt-10 flex flex-wrap gap-2">
+            {STACK.map((name) => (
+              <span
+                key={name}
+                className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200"
               >
-                Explore Smart Homes <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              <Button
-                size="lg"
-                variant="secondary"
-                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 min-h-[48px] px-8 text-base font-medium"
-                onClick={() => openQuote()}
-              >
-                Speak to an Engineer
-              </Button>
-            </div>
+                {name}
+              </span>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Smart Home Section */}
-      <section className="py-16 sm:py-24 bg-white border-b border-slate-100">
-        <PageContainer>
-          <div className="grid lg:grid-cols-12 gap-12 items-center">
-            <div className="lg:col-span-5 space-y-6">
-              <span className="text-xs font-bold text-primary uppercase tracking-widest">
-                Luxurious Automation
-              </span>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                Intelligent Living: Smart Home Environments
+      <section id="about" className="scroll-mt-24 border-b border-slate-100 bg-white py-10 sm:py-12">
+        <PageContainer className="py-0">
+          <div className="grid items-start gap-8 lg:grid-cols-12 lg:gap-10">
+            <div className="lg:col-span-7 space-y-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-[#FF7A00]">About us</p>
+              <h2 className="text-3xl font-extrabold tracking-tight text-[#0B192C] sm:text-4xl">
+                One team for catalog hardware and live sites
               </h2>
               <p className="text-slate-600 leading-relaxed">
-                Step into a modern lifestyle where your environment works with you. SmartZone crafts
-                world-class residential smart setups designed for Pakistan's luxury residences. Keep
-                your space beautifully illuminated, climate-optimized, and totally secure.
+                Buy a lock or a camera from the store, or brief us for a full villa, society gate,
+                or plant. We specify the BOM, install it, and keep spare SKUs on the same platform
+                so operations is not stuck waiting on grey-market parts.
               </p>
-              <ul className="space-y-4">
+              <ul className="space-y-3">
                 {[
-                  "Adaptive Ambient Lighting: Synchronize soft dimmers, accent colors, and custom scenes with the local sunset.",
-                  "Smart AC & Heat Management: Self-regulating climate control that saves power based on room occupancy.",
-                  "Voice-Controlled Everything: Native offline and cloud voice triggers through Alexa, Siri, and Google Home.",
-                  "Automated Curtains & Blinds: Programmed window treatments that roll down automatically in high heat.",
-                ].map((item, idx) => {
-                  const [title, desc] = item.split(": ");
-                  return (
-                    <li key={idx} className="flex gap-3">
-                      <div className="h-6 w-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                        <CheckCircle2 className="h-4 w-4" />
-                      </div>
-                      <span className="text-sm text-slate-700">
-                        <strong className="text-slate-900">{title}:</strong> {desc}
-                      </span>
-                    </li>
-                  );
-                })}
+                  "Residential: scenes, climate, curtains, and biometric entry with UPS-aware design.",
+                  "Security: NVR/CCTV, smart locks, smoke/gas interlock, SMS to listed owners.",
+                  "Industrial: PLC/HMI, Modbus gateways, ANPR barriers, and Jetson edge where AI is on-site.",
+                ].map((line) => (
+                  <li key={line} className="flex gap-3 text-sm text-slate-700">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#FF7A00]" />
+                    {line}
+                  </li>
+                ))}
               </ul>
-              <div className="pt-4">
-                <Button
-                  className="bg-slate-900 hover:bg-slate-800 text-white min-h-[48px]"
-                  onClick={() => openQuote("Whole-Home Smart Automation")}
-                >
-                  Configure My Smart Home <Sliders className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="lg:col-span-7 grid grid-cols-2 gap-4">
-              <div className="space-y-4">
-                <div className="rounded-2xl overflow-hidden shadow-md">
-                  <img
-                    src="https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80"
-                    alt="Elegant Living Room Lighting"
-                    className="w-full h-48 object-cover hover:scale-105 transition duration-500"
-                  />
-                </div>
-                <div className="rounded-2xl overflow-hidden shadow-md">
-                  <img
-                    src="https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=600&q=80"
-                    alt="Modern Home Interface"
-                    className="w-full h-64 object-cover hover:scale-105 transition duration-500"
-                  />
-                </div>
-              </div>
-              <div className="space-y-4 pt-8">
-                <div className="rounded-2xl overflow-hidden shadow-md">
-                  <img
-                    src="https://images.unsplash.com/photo-1582139329536-e7284fece509?auto=format&fit=crop&w=600&q=80"
-                    alt="Secure Smart Door Lock"
-                    className="w-full h-64 object-cover hover:scale-105 transition duration-500"
-                  />
-                </div>
-                <div className="rounded-2xl overflow-hidden shadow-md">
-                  <img
-                    src="https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=600&q=80"
-                    alt="Smart Home Entertainment"
-                    className="w-full h-48 object-cover hover:scale-105 transition duration-500"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </PageContainer>
-      </section>
-
-      {/* Advanced Security & Video Solutions */}
-      <section className="py-16 sm:py-24 bg-slate-50 border-b border-slate-100">
-        <PageContainer>
-          <div className="grid lg:grid-cols-12 gap-12 items-center">
-            <div className="lg:col-span-6 order-2 lg:order-1">
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-                <img
-                  src="https://images.unsplash.com/photo-1557597774-9d273605dfa9?auto=format&fit=crop&w=1000&q=80"
-                  alt="High-definition Smart Camera Surveillance"
-                  className="w-full h-[450px] object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
-                <div className="absolute bottom-6 left-6 right-6 text-white space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
-                    <span className="text-xs uppercase font-semibold tracking-wider text-red-400">
-                      AI Active Threat Deterrence
-                    </span>
-                  </div>
-                  <h4 className="text-lg font-bold">Smart Video Guard</h4>
-                  <p className="text-xs text-slate-300">
-                    Real-time video analytics trigger powerful floodlights and automated sirens the
-                    moment an unauthorized human steps past your property line.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="lg:col-span-6 order-1 lg:order-2 space-y-6">
-              <span className="text-xs font-bold text-primary uppercase tracking-widest">
-                Active Deterrence & Safety
-              </span>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                Enterprise & Residential Security Systems
-              </h2>
-              <p className="text-slate-600 leading-relaxed">
-                Legacy security only records crimes; SmartZone active solutions deter them before
-                they occur. Connect intelligent cameras, biometric smart deadbolts, and
-                environmental detectors into a unified safety shield.
+              <p className="flex items-start gap-2 pt-2 text-sm text-muted-foreground">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#0052B4]" />
+                {officeAddress}
               </p>
-              <div className="grid sm:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Lock className="h-5 w-5 text-primary" />
-                    <h4 className="font-semibold text-slate-900 text-sm">Biometric Smart Entry</h4>
-                  </div>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Never lose keys again. Access your home or commercial zone via facial
-                    recognition, encrypted RFID cards, temporary PINs, or your smartphone.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Video className="h-5 w-5 text-primary" />
-                    <h4 className="font-semibold text-slate-900 text-sm">Intelligent AI CCTV</h4>
-                  </div>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    2K/4K active PTZ security cameras with customized line-crossing, license plate
-                    logs, and true day/night infrared matrices.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Bell className="h-5 w-5 text-primary" />
-                    <h4 className="font-semibold text-slate-900 text-sm">Instant SMS Alerts</h4>
-                  </div>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    In emergencies like intrusion, fire, or gas detection, our automated cloud
-                    dispatches immediate phone dialer and SMS calls to listed owners.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5 text-primary" />
-                    <h4 className="font-semibold text-slate-900 text-sm">Uninterruptible Power</h4>
-                  </div>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Designed for Pakistan's grid conditions. Standard back-up batteries guarantee
-                    seamless operation during load shedding.
-                  </p>
-                </div>
-              </div>
-              <div className="pt-4">
-                <Button
-                  className="bg-primary hover:bg-primary/90 text-white min-h-[48px]"
-                  onClick={() => openQuote("Active Security & Surveillance")}
-                >
-                  Request Security Package <ShieldCheck className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
+            </div>
+            <div className="lg:col-span-5 space-y-3">
+              <IotAboutVisual />
             </div>
           </div>
         </PageContainer>
       </section>
 
-      {/* Sensors Catalog Section */}
-      <section className="py-16 sm:py-24 bg-white">
-        <PageContainer>
-          <div className="text-center max-w-3xl mx-auto space-y-4 mb-14">
-            <span className="text-xs font-bold text-primary uppercase tracking-widest">
-              Core Engineering Pieces
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-              Intelligent IoT Sensors & Actuators
-            </h2>
-            <p className="text-slate-600">
-              The brains behind our custom automation. Every sensor is engineered with premium
-              silicon and low-power wireless modules to ensure reliable operations in any building.
-            </p>
-          </div>
+      <IotSolutionBands onQuote={openQuote} />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {SENSORS_CATALOG.map((s) => {
-              const Icon = s.icon;
-              return (
-                <div
-                  key={s.name}
-                  className="p-6 rounded-2xl border border-slate-100 bg-white hover:border-slate-200 hover:shadow-lg transition duration-300 space-y-4 flex flex-col"
-                >
-                  <div
-                    className={`h-12 w-12 rounded-xl flex items-center justify-center border shrink-0 ${s.color}`}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-bold text-slate-900 text-base leading-snug">{s.name}</h4>
-                    </div>
-                    <span className="inline-block text-[10px] uppercase font-bold tracking-wider text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md">
-                      {s.tech}
-                    </span>
-                    <p className="text-xs text-slate-500 leading-relaxed">{s.use}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </PageContainer>
-      </section>
-
-      {/* Solutions packages */}
-      <section className="py-16 sm:py-24 bg-slate-50 border-t border-slate-100">
-        <PageContainer>
-          <div className="text-center max-w-3xl mx-auto space-y-4 mb-14">
-            <span className="text-xs font-bold text-primary uppercase tracking-widest">
-              Smart Gate & Barrier Operations
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-              AI Number Plate Recognition & Guard Console
-            </h2>
-            <p className="text-slate-600">
-              Test real-time ANPR OCR threshold locking, manual guard corrections, misread flagging,
-              and audit trail retention.
-            </p>
-          </div>
-
-          <AnprGateConsole />
-
-          <div className="text-center max-w-3xl mx-auto space-y-4 mb-14 mt-20">
-            <span className="text-xs font-bold text-primary uppercase tracking-widest">
-              Deployable Packages
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-              Ready-to-Deploy IoT Suites
-            </h2>
-            <p className="text-slate-600">
-              Explore our standard pre-engineered deployment blueprints featuring proven local
-              surveillance, industrial telemetry, and SCADA automation stacks.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {SOLUTIONS.map(({ icon: Icon, title, desc, tags }) => (
+      <section id="suites" className="scroll-mt-24 border-t border-slate-200/80 bg-slate-50 pt-8 pb-12 sm:pt-10 sm:pb-16">
+        <PageContainer className="py-0">
+          <HomeSectionHeader
+            className="px-0 pb-5 pt-0"
+            badge={<HomeSectionBadge>Add-on suites</HomeSectionBadge>}
+            title="What is not already in the photo cards"
+            subtitle="Home, CCTV, industrial, gates, fire/gas, and tower jobs are quoted from the cards above. These two are extra."
+          />
+          <div className="grid gap-4 md:grid-cols-2">
+            {ADDON_SUITES.map(({ icon: Icon, title, desc, tags, image }) => (
               <article
                 key={title}
-                className="group rounded-2xl border bg-white p-6 sm:p-8 hover:shadow-xl hover:border-primary/20 transition flex flex-col justify-between"
+                className="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-xs"
               >
-                <div className="space-y-4">
-                  <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition">
+                <div className="relative h-[240px] bg-[#071018] sm:h-[280px]">
+                  <img
+                    src={image}
+                    alt=""
+                    className="h-full w-full object-contain object-center"
+                  />
+                </div>
+                <div className="p-5 sm:p-6">
+                  <div className="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-[#FF7A00] text-white">
                     <Icon className="h-5 w-5" />
                   </div>
-                  <h3 className="font-bold text-slate-900 text-lg leading-snug">{title}</h3>
-                  <p className="text-sm text-slate-500 leading-relaxed">{desc}</p>
-                  <div className="flex flex-wrap gap-1.5 pt-2">
+                  <h3 className="text-lg font-black leading-tight text-[#0B192C]">{title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{desc}</p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
                     {tags.map((t) => (
                       <span
                         key={t}
-                        className="text-[10px] bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full font-medium"
+                        className="rounded border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[10px] font-medium text-slate-600"
                       >
                         {t}
                       </span>
                     ))}
                   </div>
-                </div>
-                <div className="pt-6 mt-6 border-t border-slate-50">
                   <Button
-                    variant="ghost"
                     size="sm"
-                    className="p-0 text-primary hover:bg-transparent text-sm font-semibold hover:text-primary/80 group-hover:translate-x-1 transition duration-200"
+                    className="mt-4 bg-[#FF7A00] font-bold text-white hover:bg-[#E56E00]"
                     onClick={() => openQuote(title)}
                   >
-                    Request blueprint & quote <ArrowRight className="ml-2 h-4 w-4" />
+                    Get a quote <ArrowRight className="ml-1.5 h-4 w-4" />
                   </Button>
                 </div>
               </article>
@@ -623,22 +421,49 @@ function Solutions() {
         </PageContainer>
       </section>
 
-      {/* Quote Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-950">
-              {selectedSolution
-                ? `Quote Request: ${selectedSolution}`
-                : "Speak with an IoT Specialist"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="pt-4">
-            <ConsultationForm
-              defaultSolution={selectedSolution}
-              onClose={() => setDialogOpen(false)}
-            />
+      <section id="quote" className="scroll-mt-24 bg-[#0B192C] py-12 text-white sm:py-16">
+        <PageContainer className="py-0">
+          <div className="grid items-start gap-10 lg:grid-cols-12">
+            <div className="lg:col-span-5 space-y-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-[#FF7A00]">
+                Business quote
+              </p>
+              <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+                Tell us the site. We’ll send a survey slot.
+              </h2>
+              <p className="text-sm leading-relaxed text-slate-300">
+                Leads land in the SmartZone inbox. Share the site details and we’ll confirm a survey
+                slot by email.
+              </p>
+              <p className="text-sm">
+                <a href={`mailto:${contactEmail}`} className="text-[#00A3E0] hover:underline">
+                  {contactEmail}
+                </a>
+              </p>
+            </div>
+            <div className="lg:col-span-7 rounded-2xl border border-white/10 bg-white p-5 text-[#0B192C] sm:p-7">
+              <ConsultationForm />
+            </div>
           </div>
+        </PageContainer>
+      </section>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-[#0B192C]">
+              {selectedSolution ? `Quote: ${selectedSolution}` : "Speak with an engineer"}
+            </DialogTitle>
+            <DialogDescription>
+              We reply on email or WhatsApp within one business day.
+            </DialogDescription>
+          </DialogHeader>
+          <ConsultationForm
+            defaultSolution={selectedSolution}
+            onClose={() => setDialogOpen(false)}
+            compact
+            idPrefix="iot-dialog"
+          />
         </DialogContent>
       </Dialog>
     </>

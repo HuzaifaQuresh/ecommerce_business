@@ -1,121 +1,121 @@
 /**
  * /auth/callback
- * Handles all Supabase Auth redirect flows:
- *  - Email confirmation   (type=signup)
- *  - Password reset       (type=recovery)
- *  - Magic link           (type=magiclink)
- *
- * Supabase embeds tokens in the URL hash (#access_token=…&type=…).
- * This component reads them, exchanges them for a session, and redirects.
+ * Handles Supabase Auth redirects:
+ *  - Google OAuth
+ *  - Email confirmation
+ *  - Password reset
+ *  - Magic link / OTP
  */
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, useCallback } from "react";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { consumeAuthNext, safeInternalPath } from "@/lib/auth-redirect";
+import { ensureAuthProfile } from "@/lib/auth-profile";
+import { googleAuthError } from "@/lib/google-auth";
+import { establishSessionFromUrl, isRecoveryRedirect, markPasswordRecovery } from "@/lib/password-recovery";
+import { clearPendingVerification, readPendingVerification } from "@/lib/verify-email";
+import { getBootAuthParams } from "@/lib/auth-url-snapshot";
+import { loginIntentFromPath, resolvePostLoginPath } from "@/lib/post-login";
 
 export const Route = createFileRoute("/auth/callback")({
-  head: () => ({ meta: [{ title: "Authenticating… — SmartZone" }] }),
+  head: () => ({ meta: [{ title: "Signing you in… — SmartZone" }] }),
   component: AuthCallback,
 });
 
 function AuthCallback() {
   const navigate = useNavigate();
+  const search = useSearch({ from: "/auth" });
   const [status, setStatus] = useState<"processing" | "error" | "done">("processing");
-  const [message, setMessage] = useState("Verifying your link…");
+  const [message, setMessage] = useState("Connecting your account…");
+  const pending = readPendingVerification();
+  const emailFlow =
+    search.type === "signup" ||
+    search.type === "email" ||
+    search.type === "magiclink" ||
+    pending?.purpose === "signup";
+  const recoveryFlow = search.type === "recovery" || pending?.purpose === "recovery";
+  const boot = getBootAuthParams();
+  const oauthReturn =
+    Boolean(search.code || boot.get("code") || boot.get("access_token")) &&
+    !search.type &&
+    !emailFlow &&
+    !recoveryFlow;
 
-  const handleType = useCallback(
+  const finish = useCallback(
     (type: string) => {
-      if (type === "recovery") {
-        setMessage("Password reset verified — redirecting…");
+      if (isRecoveryRedirect(type) || type === "recovery" || recoveryFlow) {
+        setMessage("Email verified — set a new password…");
         setStatus("done");
-        setTimeout(() => navigate({ to: "/auth/reset-password" }), 800);
-      } else {
-        // signup, magiclink, invite, google → send to role-based dashboard
-        setMessage("Authentication verified — signing you in…");
-        setStatus("done");
-        setTimeout(async () => {
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
-          if (!session) {
-            navigate({ to: "/auth" });
-            return;
-          }
-          const { data: roles } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", session.user.id);
-          const list = (roles ?? []).map((r) => r.role as string);
-          if (list.includes("super_admin") || list.includes("admin")) {
-            navigate({ to: "/admin" });
-          } else if (list.includes("vendor")) {
-            navigate({ to: "/vendor" });
-          } else {
-            navigate({ to: "/account" });
-          }
-        }, 800);
+        clearPendingVerification();
+        setTimeout(() => navigate({ to: "/auth/reset-password", search: { tab: "signin" } }), 600);
+        return;
       }
+      setMessage(
+        oauthReturn ? "Google connected — opening your account…" : "Email verified — signing you in…",
+      );
+      setStatus("done");
+      clearPendingVerification();
+      setTimeout(async () => {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) {
+          const next = consumeAuthNext() || safeInternalPath(search.redirect);
+          navigate({
+            to: loginIntentFromPath(next) === "vendor" ? "/vendor/auth" : "/auth",
+            search: { tab: "signin" },
+          });
+          return;
+        }
+        await ensureAuthProfile(session.user);
+        const next = consumeAuthNext() || safeInternalPath(search.redirect);
+        const dest = await resolvePostLoginPath({
+          intent: loginIntentFromPath(next),
+          explicitNext: next,
+        });
+        navigate({ to: dest as "/", resetScroll: true });
+      }, 500);
     },
-    [navigate],
+    [navigate, oauthReturn, recoveryFlow, search.redirect],
   );
 
+  const ran = useRef(false);
+
   useEffect(() => {
-    const hash = typeof window !== "undefined" ? window.location.hash : "";
-    const search = typeof window !== "undefined" ? window.location.search : "";
+    if (ran.current) return;
+    ran.current = true;
 
-    // Parse fragment params or query params (OAuth code/tokens)
-    const params = new URLSearchParams(hash.replace(/^#/, "") || search.replace(/^\?/, ""));
-    const type = params.get("type");
-    const accessToken = params.get("access_token");
-    const refreshToken = params.get("refresh_token");
-    const errorDesc = params.get("error_description");
-    const code = params.get("code");
+    if (oauthReturn) setMessage("Signing you in with Google…");
+    else if (recoveryFlow) setMessage("Verifying your password reset email…");
+    else setMessage("Verifying your email…");
 
-    if (errorDesc) {
-      setStatus("error");
-      setMessage(decodeURIComponent(errorDesc));
-      return;
-    }
+    const stop = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") markPasswordRecovery();
+    });
 
-    if (code) {
-      // Exchange code for session if Supabase PKCE flow is used
-      supabase.auth.exchangeCodeForSession(window.location.href).then(({ error }) => {
-        if (error) {
-          setStatus("error");
-          setMessage(error.message);
-        } else {
-          handleType(type ?? "signup");
-        }
-      });
-      return;
-    }
-
-    if (!accessToken) {
-      // Maybe Supabase already exchanged the session
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          handleType(type ?? "signup");
-        } else {
-          setStatus("error");
-          setMessage("Invalid or expired session. Please sign in again.");
-        }
-      });
-      return;
-    }
-
-    // Set the session from tokens in the URL
-    supabase.auth
-      .setSession({ access_token: accessToken, refresh_token: refreshToken ?? "" })
-      .then(({ error }) => {
-        if (error) {
-          setStatus("error");
-          setMessage(error.message);
-        } else {
-          handleType(type ?? "signup");
-        }
-      });
-  }, [handleType]);
+    void (async () => {
+      const result = await establishSessionFromUrl();
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      stop.data.subscription.unsubscribe();
+      if (result.error && !result.hasSession) {
+        setStatus("error");
+        setMessage(googleAuthError(result.error));
+        return;
+      }
+      if (!result.hasSession) {
+        setStatus("error");
+        setMessage(
+          oauthReturn
+            ? "Google sign-in did not complete. Please try Continue with Google again."
+            : "This verification link is invalid or has expired. Request a new email and try again.",
+        );
+        return;
+      }
+      finish(result.type);
+    })();
+  }, [finish, oauthReturn, recoveryFlow]);
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
@@ -123,28 +123,30 @@ function AuthCallback() {
         {status === "processing" && (
           <>
             <Loader2 className="h-12 w-12 mx-auto text-primary animate-spin mb-4" />
-            <p className="font-semibold text-lg">Verifying…</p>
+            <p className="font-semibold text-lg">
+              {oauthReturn ? "Google sign-in" : recoveryFlow ? "Reset verification" : "Email verification"}
+            </p>
             <p className="text-sm text-muted-foreground mt-2">{message}</p>
           </>
         )}
         {status === "done" && (
           <>
             <CheckCircle2 className="h-12 w-12 mx-auto text-emerald-500 mb-4" />
-            <p className="font-semibold text-lg">Success</p>
+            <p className="font-semibold text-lg">Signed in</p>
             <p className="text-sm text-muted-foreground mt-2">{message}</p>
           </>
         )}
         {status === "error" && (
           <>
             <XCircle className="h-12 w-12 mx-auto text-destructive mb-4" />
-            <p className="font-semibold text-lg">Link invalid or expired</p>
+            <p className="font-semibold text-lg">Sign-in failed</p>
             <p className="text-sm text-muted-foreground mt-2">{message}</p>
             <div className="flex flex-col gap-2 mt-6">
-              <Button onClick={() => navigate({ to: "/auth/forgot-password" })}>
-                Request new link
-              </Button>
-              <Button variant="outline" onClick={() => navigate({ to: "/auth" })}>
+              <Button onClick={() => navigate({ to: "/auth", search: { tab: "signin" } })}>
                 Back to Sign In
+              </Button>
+              <Button variant="outline" onClick={() => navigate({ to: "/auth", search: { tab: "signup" } })}>
+                Create an account
               </Button>
             </div>
           </>

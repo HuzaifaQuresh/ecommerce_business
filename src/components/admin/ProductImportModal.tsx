@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,8 +7,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,35 +20,49 @@ import {
   XCircle,
   RefreshCw,
   History,
+  FileDown,
 } from "lucide-react";
-import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
+import {
+  downloadImportTemplate,
+  findExistingProduct,
+  parseProductSpreadsheet,
+  toProductRow,
+  type ParsedProductRow,
+} from "@/lib/product-import";
+import {
+  initializeMockProductsOnClient,
+  MOCK_PRODUCTS,
+  saveLocalProduct,
+  syncServerProducts,
+} from "@/lib/mock-products";
+import { cn } from "@/lib/utils";
 
-interface ParsedProductRow {
-  rowNumber: number;
-  title: string;
-  sku: string;
-  category: string;
-  subCategory?: string;
-  manufacturer?: string;
-  description?: string;
-  price_pkr: number;
-  discount_pct?: number;
-  stock: number;
-  image_url?: string;
-  tags?: string;
-  status?: string;
-  isValid: boolean;
-  errors: string[];
-}
-
-interface ImportLogItem {
+type ImportLogItem = {
   id: string;
   filename: string;
   total_rows: number;
   success_count: number;
   failed_count: number;
+  created_count: number;
+  updated_count: number;
   status: string;
   created_at: string;
+};
+
+const LOG_KEY = "nexus_import_logs";
+
+function readImportLogs(): ImportLogItem[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LOG_KEY) || "[]");
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeImportLog(entry: ImportLogItem) {
+  const next = [entry, ...readImportLogs()].slice(0, 40);
+  localStorage.setItem(LOG_KEY, JSON.stringify(next));
 }
 
 export function ProductImportModal({ onImportComplete }: { onImportComplete: () => void }) {
@@ -59,566 +71,453 @@ export function ProductImportModal({ onImportComplete }: { onImportComplete: () 
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [dragOver, setDragOver] = useState(false);
   const [parsedRows, setParsedRows] = useState<ParsedProductRow[]>([]);
   const [importSummary, setImportSummary] = useState<{
     total: number;
     success: number;
     failed: number;
+    created: number;
+    updated: number;
     errorsList: { row: number; sku: string; reason: string }[];
   } | null>(null);
   const [importHistory, setImportHistory] = useState<ImportLogItem[]>([]);
-  const [activeTab, setActiveTab] = useState<string>("upload");
+  const [activeTab, setActiveTab] = useState("upload");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch import history
   useEffect(() => {
-    if (open) {
-      fetchImportHistory();
-    }
+    if (open) setImportHistory(readImportLogs());
   }, [open]);
 
-  const fetchImportHistory = async () => {
-    try {
-      if (isSupabaseConfigured) {
-        const { data, error } = await supabase
-          .from("import_logs" as any)
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(20);
-        if (!error && data) {
-          setImportHistory(data as any);
-          return;
-        }
-      }
-      // Fallback to localStorage
-      const local = JSON.parse(localStorage.getItem("nexus_import_logs") || "[]");
-      setImportHistory(local);
-    } catch (err) {
-      console.error("Failed to load import logs", err);
-    }
+  const resetState = () => {
+    setFile(null);
+    setParsedRows([]);
+    setImportSummary(null);
+    setProgress(0);
+    setImporting(false);
+    setParsing(false);
+    setActiveTab("upload");
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const downloadSampleTemplate = () => {
-    const csvContent = [
-      "Product Name,SKU,Category,Sub-category,Brand,Description,Price,Sale Price,Stock Quantity,Product Images,Status,Tags/Keywords",
-      "Tuya Zigbee Smart Thermostat,TZ-TH-01,Climate Control,Thermostats,Tuya,Smart LCD temperature controller with Zigbee mesh.,4500,3999,75,https://images.unsplash.com/photo-1558002038-1055907df827?w=600,Active,thermostat,zigbee,climate",
-      "Smart RGB LED Strip 5m,LED-RGB-5M,Lighting,Light Strips,Sonoff,WiFi RGB LED strip light with music sync and voice control.,2800,,150,https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=600,Active,lighting,led,wifi",
-      "Wireless Smart Video Doorbell,DB-WIFI-1080,Security Cameras,Video Doorbells,Tuya,1080p HD video doorbell with two-way audio and motion sensor.,12500,11200,30,https://images.unsplash.com/photo-1557324232-b8917d4c3dcb?w=600,Active,security,camera,doorbell",
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "product_import_template.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("Sample template downloaded successfully!");
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
-
-    const validExtensions = [".csv", ".xlsx", ".xls"];
-    const fileExt = selectedFile.name.substring(selectedFile.name.lastIndexOf(".")).toLowerCase();
-    if (!validExtensions.includes(fileExt)) {
-      toast.error("Please upload a valid .csv, .xlsx, or .xls file.");
+  const acceptFile = async (selected: File | undefined | null) => {
+    if (!selected) return;
+    const ext = selected.name.substring(selected.name.lastIndexOf(".")).toLowerCase();
+    if (![".csv", ".xlsx", ".xls", ".tsv"].includes(ext)) {
+      toast.error("Please upload a .csv or .xlsx file.");
       return;
     }
-
-    if (selectedFile.size > 20 * 1024 * 1024) {
-      toast.error("File size exceeds 20MB limit.");
+    if (selected.size > 20 * 1024 * 1024) {
+      toast.error("File size exceeds 20MB.");
       return;
     }
-
-    setFile(selectedFile);
-    parseFile(selectedFile);
-  };
-
-  const parseFile = async (fileObj: File) => {
+    setFile(selected);
     setParsing(true);
     setImportSummary(null);
     try {
-      const text = await fileObj.text();
-      const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "");
-      if (lines.length < 2) {
-        toast.error("The uploaded file is empty or missing data rows.");
-        setParsing(false);
+      initializeMockProductsOnClient();
+      const rows = await parseProductSpreadsheet(selected);
+      if (!rows.length) {
+        toast.error("The file has headers but no product rows.");
+        setParsedRows([]);
         return;
       }
-
-      // Simple CSV parser
-      const parseCSVLine = (line: string) => {
-        const result: string[] = [];
-        let inQuotes = false;
-        let current = "";
-        for (let i = 0; i < line.length; i++) {
-          const char = line[i];
-          if (char === '"') {
-            inQuotes = !inQuotes;
-          } else if (char === "," && !inQuotes) {
-            result.push(current.trim());
-            current = "";
-          } else {
-            current += char;
-          }
-        }
-        result.push(current.trim());
-        return result;
-      };
-
-      const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase().replace(/[^a-z0-9]/g, ""));
-      const rows: ParsedProductRow[] = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const cols = parseCSVLine(lines[i]);
-        if (cols.length === 0 || cols.every((c) => !c)) continue;
-
-        // Map columns (robust fallback matching)
-        const getCol = (possibleNames: string[]) => {
-          for (const name of possibleNames) {
-            const idx = headers.findIndex((h) => h.includes(name));
-            if (idx !== -1 && cols[idx] !== undefined) return cols[idx].replace(/^"|"$/g, "");
-          }
-          return "";
-        };
-
-        const title = getCol(["productname", "title", "name"]);
-        const sku = getCol(["sku", "productcode", "code"]) || `SKU-${Date.now()}-${i}`;
-        const category = getCol(["category"]) || "Components";
-        const subCategory = getCol(["subcategory", "sub-category"]) || "";
-        const manufacturer = getCol(["brand", "manufacturer"]) || "Tuya";
-        const description = getCol(["description"]) || "";
-        const priceStr = getCol(["price", "regularprice"]) || "0";
-        const stockStr = getCol(["stock", "quantity", "stockquantity"]) || "50";
-        const imageUrl =
-          getCol(["image", "imageurl", "productimages"]) ||
-          "https://images.unsplash.com/photo-1518770660439-4636190af475?w=600";
-        const tags = getCol(["tags", "keywords"]) || "smart-home";
-
-        const price_pkr = parseFloat(priceStr.replace(/[^0-9.]/g, "")) || 0;
-        const stock = parseInt(stockStr.replace(/[^0-9]/g, "")) || 0;
-
-        const errors: string[] = [];
-        if (!title) errors.push("Missing Product Name");
-        if (!sku) errors.push("Missing SKU");
-        if (price_pkr <= 0) errors.push("Invalid or zero price");
-        if (stock < 0) errors.push("Invalid stock quantity");
-
-        rows.push({
-          rowNumber: i + 1,
-          title,
-          sku,
-          category,
-          subCategory,
-          manufacturer,
-          description,
-          price_pkr,
-          stock,
-          image_url: imageUrl,
-          tags,
-          isValid: errors.length === 0,
-          errors,
-        });
-      }
-
       setParsedRows(rows);
       setActiveTab("preview");
-      toast.success(
-        `Successfully parsed ${rows.length} rows (${rows.filter((r) => r.isValid).length} valid).`,
-      );
-    } catch (err) {
+      const valid = rows.filter((row) => row.isValid).length;
+      toast.success(`Parsed ${rows.length} rows — ${valid} ready to import.`);
+    } catch (err: any) {
       console.error("Parse error", err);
-      toast.error("Failed to parse file. Please verify format.");
+      toast.error(err?.message || "Could not read this file. Use the CSV/Excel template.");
+      setParsedRows([]);
     } finally {
       setParsing(false);
     }
   };
 
   const handleConfirmImport = async () => {
-    if (parsedRows.length === 0) return;
+    const validRows = parsedRows.filter((row) => row.isValid);
+    if (!validRows.length) return;
     setImporting(true);
-    setProgress(10);
+    setProgress(8);
 
-    let successCount = 0;
-    let failedCount = 0;
+    initializeMockProductsOnClient();
+    try {
+      await syncServerProducts();
+    } catch {
+      /* local catalog is enough */
+    }
+
+    let created = 0;
+    let updated = 0;
+    let failed = 0;
     const errorsList: { row: number; sku: string; reason: string }[] = [];
-
-    const existingProducts = JSON.parse(localStorage.getItem("nexus_local_products") || "[]");
 
     for (let i = 0; i < parsedRows.length; i++) {
       const row = parsedRows[i];
       if (!row.isValid) {
-        failedCount++;
-        errorsList.push({ row: row.rowNumber, sku: row.sku, reason: row.errors.join(", ") });
-        continue;
-      }
-
-      try {
-        // Upsert logic by SKU or title slug
-        const slug = row.title
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "");
-        const productPayload = {
-          id: `prod-${Date.now()}-${i}`,
-          title: row.title,
-          slug,
-          description: row.description || "Imported smart device item.",
-          category: row.category,
-          price_pkr: row.price_pkr,
-          stock: row.stock,
-          image_url: row.image_url,
-          manufacturer: row.manufacturer,
-          tags: row.tags.split(",").map((t) => t.trim()),
-          availability: row.stock > 0 ? "in_stock" : "out_of_stock",
-          updated_at: new Date().toISOString(),
-        };
-
-        if (isSupabaseConfigured) {
-          // Check existing in Supabase
-          const { data: existing } = await supabase
-            .from("products")
-            .select("id")
-            .eq("slug", slug)
-            .maybeSingle();
-
-          if (existing) {
-            await supabase.from("products").update(productPayload).eq("id", existing.id);
-          } else {
-            await supabase.from("products").insert([productPayload]);
-          }
+        failed++;
+        errorsList.push({ row: row.rowNumber, sku: row.sku, reason: row.errors.join("; ") });
+      } else {
+        try {
+          const existing = findExistingProduct(MOCK_PRODUCTS, row);
+          const product = toProductRow(row, existing);
+          saveLocalProduct(product);
+          if (existing) updated++;
+          else created++;
+        } catch (err: any) {
+          failed++;
+          errorsList.push({
+            row: row.rowNumber,
+            sku: row.sku,
+            reason: err?.message || "Could not save this product",
+          });
         }
-
-        // Also save to localStorage
-        const idx = existingProducts.findIndex((p: any) => p.slug === slug || p.sku === row.sku);
-        if (idx !== -1) {
-          existingProducts[idx] = { ...existingProducts[idx], ...productPayload };
-        } else {
-          existingProducts.unshift(productPayload);
-        }
-
-        successCount++;
-      } catch (err: any) {
-        failedCount++;
-        errorsList.push({
-          row: row.rowNumber,
-          sku: row.sku,
-          reason: err.message || "Database insert error",
-        });
       }
-
-      setProgress(Math.round(((i + 1) / parsedRows.length) * 90) + 10);
+      setProgress(Math.round(((i + 1) / parsedRows.length) * 90) + 8);
+      if (i % 8 === 7) await new Promise((resolve) => setTimeout(resolve, 0));
     }
 
-    localStorage.setItem("nexus_local_products", JSON.stringify(existingProducts));
-
-    // Log import
-    const newLog: ImportLogItem = {
+    const log: ImportLogItem = {
       id: "log-" + Date.now(),
-      filename: file?.name || "products_import.csv",
+      filename: file?.name || "products-import",
       total_rows: parsedRows.length,
-      success_count: successCount,
-      failed_count: failedCount,
+      success_count: created + updated,
+      failed_count: failed,
+      created_count: created,
+      updated_count: updated,
       status: "completed",
       created_at: new Date().toISOString(),
     };
-
-    if (isSupabaseConfigured) {
-      await supabase.from("import_logs" as any).insert([newLog]);
-    } else {
-      const localLogs = JSON.parse(localStorage.getItem("nexus_import_logs") || "[]");
-      localStorage.setItem("nexus_import_logs", JSON.stringify([newLog, ...localLogs]));
-    }
+    writeImportLog(log);
+    setImportHistory(readImportLogs());
 
     setImporting(false);
     setProgress(100);
     setImportSummary({
       total: parsedRows.length,
-      success: successCount,
-      failed: failedCount,
+      success: created + updated,
+      failed,
+      created,
+      updated,
       errorsList,
     });
     setActiveTab("summary");
-    toast.success(`Import completed: ${successCount} imported/updated, ${failedCount} failed.`);
+    toast.success(
+      `Import complete: ${created} created, ${updated} updated${failed ? `, ${failed} skipped` : ""}.`,
+    );
     onImportComplete();
-    fetchImportHistory();
   };
 
   const downloadErrorReport = () => {
-    if (!importSummary || importSummary.errorsList.length === 0) return;
-    const csvContent = [
+    if (!importSummary?.errorsList.length) return;
+    const csv = [
       "Row Number,SKU,Error Reason",
-      ...importSummary.errorsList.map((e) => `${e.row},"${e.sku}","${e.reason}"`),
+      ...importSummary.errorsList.map(
+        (item) => `${item.row},"${item.sku.replace(/"/g, '""')}","${item.reason.replace(/"/g, '""')}"`,
+      ),
     ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "import_error_report.csv");
+    link.href = url;
+    link.download = "smartzone-import-errors.csv";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("Error report downloaded.");
+    URL.revokeObjectURL(url);
   };
 
+  const validCount = parsedRows.filter((row) => row.isValid).length;
+  const errorCount = parsedRows.length - validCount;
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) resetState();
+      }}
+    >
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
+        <Button variant="outline" className="min-h-[44px] gap-2 border-[#0052B4]/30 text-[#0B192C]">
           <Upload className="h-4 w-4" />
-          Import Products (Excel/CSV)
+          Import Excel / CSV
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl font-semibold">
-            <FileSpreadsheet className="h-6 w-6 text-primary" />
-            Bulk Product Import (Excel & CSV)
+          <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-[#0B192C]">
+            <FileSpreadsheet className="h-6 w-6 text-[#FF7A00]" />
+            Bulk catalog import
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid grid-cols-4 w-full">
-            <TabsTrigger value="upload">1. Upload & Template</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="upload">1. File</TabsTrigger>
             <TabsTrigger value="preview" disabled={parsedRows.length === 0}>
               2. Preview ({parsedRows.length})
             </TabsTrigger>
             <TabsTrigger value="summary" disabled={!importSummary}>
-              3. Summary Report
+              3. Result
             </TabsTrigger>
             <TabsTrigger value="history" className="gap-1.5">
               <History className="h-3.5 w-3.5" />
-              Import History
+              History
             </TabsTrigger>
           </TabsList>
 
-          {/* TAB 1: UPLOAD */}
-          <TabsContent value="upload" className="space-y-6 pt-4">
-            <div className="bg-muted/40 border border-dashed rounded-xl p-8 text-center space-y-4">
-              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+          <TabsContent value="upload" className="space-y-5 pt-4">
+            <div
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(event) => {
+                event.preventDefault();
+                setDragOver(false);
+                void acceptFile(event.dataTransfer.files?.[0]);
+              }}
+              className={cn(
+                "rounded-xl border-2 border-dashed p-8 text-center space-y-4 transition-colors",
+                dragOver
+                  ? "border-[#FF7A00] bg-[#FF7A00]/8"
+                  : "border-[#0052B4]/25 bg-[#0052B4]/[0.04]",
+              )}
+            >
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#0B192C] text-white">
                 <Upload className="h-6 w-6" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-semibold text-lg">Upload Product Spreadsheet</h3>
+                <h3 className="text-lg font-semibold text-[#0B192C]">Drop Excel or CSV here</h3>
                 <p className="text-sm text-muted-foreground">
-                  Supports .csv, .xlsx, and .xls files up to 20MB with automatic SKU upsert logic.
+                  .xlsx and .csv up to 20MB. Matching SKUs update existing products; new SKUs are
+                  added. The rest of the catalog is left untouched.
                 </p>
               </div>
-              <div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv, .xlsx, .xls"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={parsing}
-                  className="gap-2"
-                >
-                  {parsing ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
-                  {parsing ? "Parsing File..." : "Select File"}
-                </Button>
-              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.xlsx,.xls,.tsv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                onChange={(event) => void acceptFile(event.target.files?.[0])}
+                className="hidden"
+              />
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={parsing}
+                className="gap-2 bg-[#FF7A00] hover:bg-[#E56E00] text-white"
+              >
+                {parsing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {parsing ? "Reading file…" : "Select file"}
+              </Button>
               {file && (
-                <p className="text-xs text-emerald-600 font-medium">
-                  Selected: {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                <p className="text-xs font-medium text-emerald-700">
+                  {file.name} ({(file.size / 1024).toFixed(1)} KB)
                 </p>
               )}
             </div>
 
-            <div className="border rounded-xl p-6 bg-card space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-semibold">Need a template to start?</h4>
-                  <p className="text-xs text-muted-foreground">
-                    Download our sample CSV template pre-configured with correct headers, pricing,
-                    stock, and sample rows.
-                  </p>
-                </div>
-                <Button variant="outline" onClick={downloadSampleTemplate} className="gap-2">
+            <div className="rounded-xl border bg-card p-5 space-y-3">
+              <h4 className="font-semibold text-[#0B192C]">Import template</h4>
+              <p className="text-xs text-muted-foreground">
+                Required: Product Name, Price. SKU is used to update an existing item. Sale Price
+                becomes a discount. Status maps to in stock / on demand / coming soon / obsolete.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => {
+                    void downloadImportTemplate("xlsx");
+                    toast.success("Excel template downloaded.");
+                  }}
+                >
+                  <FileDown className="h-4 w-4" />
+                  Excel template
+                </Button>
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => {
+                    void downloadImportTemplate("csv");
+                    toast.success("CSV template downloaded.");
+                  }}
+                >
                   <Download className="h-4 w-4" />
-                  Download Sample Template
+                  CSV template
                 </Button>
               </div>
             </div>
           </TabsContent>
 
-          {/* TAB 2: PREVIEW */}
-          <TabsContent value="preview" className="space-y-6 pt-4">
-            <div className="flex items-center justify-between">
+          <TabsContent value="preview" className="space-y-5 pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="font-semibold text-base">Data Preview & Validation</h3>
+                <h3 className="font-semibold">Validation preview</h3>
                 <p className="text-xs text-muted-foreground">
-                  Reviewing {parsedRows.length} rows. Valid rows will be created or updated by SKU.
+                  Valid rows upsert by SKU into the live catalog. Invalid rows are skipped.
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Badge
-                  variant="outline"
-                  className="bg-emerald-50 text-emerald-700 border-emerald-200"
-                >
-                  {parsedRows.filter((r) => r.isValid).length} Valid
+                <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                  {validCount} ready
                 </Badge>
-                <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200">
-                  {parsedRows.filter((r) => !r.isValid).length} Errors
+                <Badge variant="outline" className="border-rose-200 bg-rose-50 text-rose-700">
+                  {errorCount} errors
                 </Badge>
               </div>
             </div>
 
-            <div className="border rounded-xl overflow-hidden max-h-[350px] overflow-y-auto">
+            <div className="max-h-[350px] overflow-auto rounded-xl border">
               <table className="w-full text-xs">
-                <thead className="bg-muted/80 sticky top-0 text-left">
+                <thead className="sticky top-0 bg-muted/90 text-left">
                   <tr>
                     <th className="p-2.5 font-semibold">Row</th>
                     <th className="p-2.5 font-semibold">Status</th>
-                    <th className="p-2.5 font-semibold">Product Title</th>
+                    <th className="p-2.5 font-semibold">Title</th>
                     <th className="p-2.5 font-semibold">SKU</th>
                     <th className="p-2.5 font-semibold">Category</th>
-                    <th className="p-2.5 font-semibold">Price (PKR)</th>
+                    <th className="p-2.5 font-semibold">Price</th>
                     <th className="p-2.5 font-semibold">Stock</th>
-                    <th className="p-2.5 font-semibold">Validation Notes</th>
+                    <th className="p-2.5 font-semibold">Notes</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {parsedRows.slice(0, 50).map((row) => (
-                    <tr key={row.rowNumber} className="border-t hover:bg-muted/20">
-                      <td className="p-2.5 font-mono">{row.rowNumber}</td>
-                      <td className="p-2.5">
-                        {row.isValid ? (
-                          <span className="flex items-center gap-1 text-emerald-600 font-medium">
-                            <CheckCircle2 className="h-3.5 w-3.5" /> Ready
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-rose-600 font-medium">
-                            <XCircle className="h-3.5 w-3.5" /> Error
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-2.5 font-medium truncate max-w-[180px]">
-                        {row.title || "—"}
-                      </td>
-                      <td className="p-2.5 font-mono">{row.sku}</td>
-                      <td className="p-2.5">{row.category}</td>
-                      <td className="p-2.5 font-semibold">Rs {row.price_pkr.toLocaleString()}</td>
-                      <td className="p-2.5">{row.stock}</td>
-                      <td className="p-2.5 text-rose-600">
-                        {row.errors.length > 0 ? row.errors.join("; ") : "Valid"}
-                      </td>
-                    </tr>
-                  ))}
+                  {parsedRows.slice(0, 80).map((row) => {
+                    const existing = findExistingProduct(MOCK_PRODUCTS, row);
+                    const notes = [...row.errors, ...row.warnings];
+                    return (
+                      <tr key={row.rowNumber} className="border-t hover:bg-muted/20">
+                        <td className="p-2.5 font-mono">{row.rowNumber}</td>
+                        <td className="p-2.5">
+                          {row.isValid ? (
+                            <span className="flex items-center gap-1 font-medium text-emerald-600">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              {existing ? "Update" : "New"}
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 font-medium text-rose-600">
+                              <XCircle className="h-3.5 w-3.5" /> Error
+                            </span>
+                          )}
+                        </td>
+                        <td className="max-w-[180px] truncate p-2.5 font-medium">{row.title || "—"}</td>
+                        <td className="p-2.5 font-mono">{row.sku || "—"}</td>
+                        <td className="p-2.5">{row.category}</td>
+                        <td className="p-2.5 font-semibold">Rs {row.price_pkr.toLocaleString()}</td>
+                        <td className="p-2.5">{row.stock}</td>
+                        <td className={cn("p-2.5", row.errors.length ? "text-rose-600" : "text-amber-700")}>
+                          {notes.length ? notes.join("; ") : "OK"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+            {parsedRows.length > 80 && (
+              <p className="text-xs text-muted-foreground">Showing first 80 rows. All rows still import.</p>
+            )}
 
             {importing && (
               <div className="space-y-2">
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Importing products into database...</span>
+                  <span>Writing products into catalog…</span>
                   <span>{progress}%</span>
                 </div>
                 <Progress value={progress} className="h-2" />
               </div>
             )}
 
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex justify-end gap-3 pt-1">
               <Button variant="outline" onClick={() => setActiveTab("upload")}>
                 Back
               </Button>
               <Button
-                onClick={handleConfirmImport}
-                disabled={importing || parsedRows.filter((r) => r.isValid).length === 0}
-                className="gap-2"
+                onClick={() => void handleConfirmImport()}
+                disabled={importing || validCount === 0}
+                className="gap-2 bg-[#0B192C] hover:bg-[#0F2C59]"
               >
                 {importing ? (
                   <RefreshCw className="h-4 w-4 animate-spin" />
                 ) : (
                   <CheckCircle2 className="h-4 w-4" />
                 )}
-                {importing
-                  ? "Importing..."
-                  : `Confirm & Import ${parsedRows.filter((r) => r.isValid).length} Products`}
+                {importing ? "Importing…" : `Import ${validCount} products`}
               </Button>
             </div>
           </TabsContent>
 
-          {/* TAB 3: SUMMARY REPORT */}
           <TabsContent value="summary" className="space-y-6 pt-4">
             {importSummary && (
               <div className="space-y-6">
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="border rounded-xl p-4 bg-card text-center">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div className="rounded-xl border bg-card p-4 text-center">
                     <div className="text-2xl font-bold">{importSummary.total}</div>
-                    <div className="text-xs text-muted-foreground">Total Processed</div>
+                    <div className="text-xs text-muted-foreground">Processed</div>
                   </div>
-                  <div className="border rounded-xl p-4 bg-emerald-50 border-emerald-200 text-center text-emerald-800">
-                    <div className="text-2xl font-bold">{importSummary.success}</div>
-                    <div className="text-xs text-emerald-600">Successfully Imported</div>
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center text-emerald-800">
+                    <div className="text-2xl font-bold">{importSummary.created}</div>
+                    <div className="text-xs text-emerald-700">Created</div>
                   </div>
-                  <div className="border rounded-xl p-4 bg-rose-50 border-rose-200 text-center text-rose-800">
+                  <div className="rounded-xl border border-[#0052B4]/20 bg-[#0052B4]/5 p-4 text-center text-[#0B192C]">
+                    <div className="text-2xl font-bold">{importSummary.updated}</div>
+                    <div className="text-xs text-[#0052B4]">Updated</div>
+                  </div>
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-center text-rose-800">
                     <div className="text-2xl font-bold">{importSummary.failed}</div>
-                    <div className="text-xs text-rose-600">Failed Rows</div>
+                    <div className="text-xs text-rose-600">Skipped</div>
                   </div>
                 </div>
 
                 {importSummary.failed > 0 && (
-                  <div className="border rounded-xl p-6 bg-card space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-amber-600 font-semibold">
+                  <div className="space-y-3 rounded-xl border bg-card p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 font-semibold text-amber-700">
                         <AlertTriangle className="h-5 w-5" />
-                        <span>Failed Rows Breakdown</span>
+                        Skipped rows
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={downloadErrorReport}
-                        className="gap-2"
-                      >
+                      <Button variant="outline" size="sm" className="gap-2" onClick={downloadErrorReport}>
                         <Download className="h-4 w-4" />
-                        Download Error Report (.csv)
+                        Error CSV
                       </Button>
                     </div>
-                    <div className="max-h-[200px] overflow-y-auto border rounded-lg p-3 text-xs space-y-2 bg-muted/30">
-                      {importSummary.errorsList.map((err, idx) => (
-                        <div key={idx} className="flex justify-between border-b pb-1">
+                    <div className="max-h-[200px] space-y-2 overflow-y-auto rounded-lg border bg-muted/30 p-3 text-xs">
+                      {importSummary.errorsList.map((item, idx) => (
+                        <div key={idx} className="flex justify-between gap-3 border-b pb-1">
                           <span className="font-mono">
-                            Row {err.row} (SKU: {err.sku})
+                            Row {item.row} · {item.sku}
                           </span>
-                          <span className="text-rose-600">{err.reason}</span>
+                          <span className="text-rose-600">{item.reason}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                <div className="flex justify-end gap-3">
-                  <Button onClick={() => setOpen(false)}>Done</Button>
+                <div className="flex justify-end">
+                  <Button className="bg-[#FF7A00] hover:bg-[#E56E00] text-white" onClick={() => setOpen(false)}>
+                    Done
+                  </Button>
                 </div>
               </div>
             )}
           </TabsContent>
 
-          {/* TAB 4: HISTORY */}
           <TabsContent value="history" className="space-y-4 pt-4">
-            <h3 className="font-semibold text-base">Recent Import Audit Logs</h3>
-            <div className="border rounded-xl overflow-hidden max-h-[350px] overflow-y-auto">
+            <h3 className="font-semibold">Recent imports</h3>
+            <div className="max-h-[350px] overflow-auto rounded-xl border">
               <table className="w-full text-xs">
-                <thead className="bg-muted/80 sticky top-0 text-left">
+                <thead className="sticky top-0 bg-muted/90 text-left">
                   <tr>
-                    <th className="p-2.5 font-semibold">Filename</th>
+                    <th className="p-2.5 font-semibold">File</th>
                     <th className="p-2.5 font-semibold">Total</th>
-                    <th className="p-2.5 font-semibold">Success</th>
+                    <th className="p-2.5 font-semibold">Created</th>
+                    <th className="p-2.5 font-semibold">Updated</th>
                     <th className="p-2.5 font-semibold">Failed</th>
-                    <th className="p-2.5 font-semibold">Timestamp</th>
+                    <th className="p-2.5 font-semibold">When</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -626,8 +525,9 @@ export function ProductImportModal({ onImportComplete }: { onImportComplete: () 
                     <tr key={log.id} className="border-t hover:bg-muted/20">
                       <td className="p-2.5 font-medium">{log.filename}</td>
                       <td className="p-2.5">{log.total_rows}</td>
-                      <td className="p-2.5 text-emerald-600 font-semibold">{log.success_count}</td>
-                      <td className="p-2.5 text-rose-600 font-semibold">{log.failed_count}</td>
+                      <td className="p-2.5 font-semibold text-emerald-600">{log.created_count ?? "—"}</td>
+                      <td className="p-2.5 font-semibold text-[#0052B4]">{log.updated_count ?? "—"}</td>
+                      <td className="p-2.5 font-semibold text-rose-600">{log.failed_count}</td>
                       <td className="p-2.5 text-muted-foreground">
                         {new Date(log.created_at).toLocaleString()}
                       </td>
@@ -635,8 +535,8 @@ export function ProductImportModal({ onImportComplete }: { onImportComplete: () 
                   ))}
                   {importHistory.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="p-8 text-center text-muted-foreground">
-                        No previous import logs recorded.
+                      <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                        No imports yet.
                       </td>
                     </tr>
                   )}

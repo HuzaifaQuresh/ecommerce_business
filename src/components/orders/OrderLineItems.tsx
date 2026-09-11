@@ -11,17 +11,18 @@ export function OrderLineItems({
   showAdminControls,
   onStatusChange,
 }: {
-  items: OrderItemRow[];
+  items?: OrderItemRow[] | null;
   showAdminControls?: boolean;
   onStatusChange?: (itemId: string, status: string) => void;
 }) {
-  if (!items.length) {
+  const lines = items ?? [];
+  if (!lines.length) {
     return <p className="text-sm text-muted-foreground">No line items recorded.</p>;
   }
 
   return (
     <ul className="space-y-3">
-      {items.map((item) => {
+      {lines.map((item) => {
         const lineTotal = Number(item.price_pkr) * item.quantity;
         const meta =
           ITEM_FULFILLMENT_META[item.fulfillment_status as keyof typeof ITEM_FULFILLMENT_META];

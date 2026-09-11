@@ -59,7 +59,7 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">My Account</h1>
               <p className="text-sm text-muted-foreground mt-0.5">{user?.email}</p>
               <div className="flex flex-wrap gap-1.5 mt-2">
-                {roles.length ? (
+                {roles?.length ? (
                   roles.map((r) => <RoleBadge key={r} role={r} />)
                 ) : (
                   <RoleBadge role="user" />
@@ -68,8 +68,9 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <p className="text-sm text-muted-foreground max-w-md">
-            Signed in as <span className="font-medium text-foreground">{meta.label}</span>. Manage
-            your profile and orders, or jump to a workspace below.
+            Signed in as <span className="font-medium text-foreground">{meta.label}</span>. Update
+            your profile, track orders
+            {isAdmin || isVendor ? ", or open a workspace below." : "."}
           </p>
         </div>
       </div>

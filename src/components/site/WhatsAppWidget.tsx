@@ -1,7 +1,24 @@
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { buildWhatsAppUrl, cleanSetting, settingEnabled } from "@/lib/whatsapp";
+
+const DEFAULT_PHONE = "+92 332 3059259";
+const DEFAULT_MESSAGE = "Hello SmartZone Team";
+
 export function WhatsAppWidget() {
+  const { data: settings } = useSiteSettings();
+  const enabled = settingEnabled(settings?.whatsapp_enabled, true);
+  const phone =
+    cleanSetting(settings?.whatsapp_number) ||
+    cleanSetting(settings?.contact_phone) ||
+    DEFAULT_PHONE;
+  const message = cleanSetting(settings?.whatsapp_message, DEFAULT_MESSAGE) || DEFAULT_MESSAGE;
+  const href = buildWhatsAppUrl(phone, message);
+
+  if (!enabled || !href) return null;
+
   return (
     <a
-      href="https://wa.me/923323059259?text=Hello%20SmartZone%20Team"
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="WhatsApp Chat"

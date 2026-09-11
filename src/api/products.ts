@@ -1,24 +1,42 @@
 import { supabase } from "@/integrations/supabase/client";
-import { getCategoryFilterValues, productMatchesCategory } from "@/lib/categories";
+import { productMatchesCategory } from "@/lib/categories";
 import {
   getMockProductBySlug,
   MOCK_PRODUCTS,
   initializeMockProductsOnClient,
   saveLocalProduct,
   deleteLocalProduct,
-  syncServerProducts,
+  ensureTuyaCatalogLoaded,
+  isDemoOrTestProduct,
 } from "@/lib/mock-products";
+import { pickHomeFeaturedProductsWithFlags } from "@/lib/home-featured";
 import type { ProductRow } from "@/types/commerce";
 
 function filterMockProducts(opts?: { category?: string; limit?: number }) {
-  let list = MOCK_PRODUCTS;
+  let list = MOCK_PRODUCTS.filter((p) => !isDemoOrTestProduct(p));
   if (opts?.category) list = list.filter((p) => productMatchesCategory(p.category, opts.category));
   if (opts?.limit) list = list.slice(0, opts.limit);
   return list;
 }
 
-const LIST_FIELDS =
-  "id,title,slug,price_pkr,image_url,category,manufacturer,discount_pct,availability,rating,stock,color";
+/** Compact card payload — no description/specs/gallery, so SSR HTML stays light. */
+export function toStorefrontProduct(p: ProductRow) {
+  return {
+    id: p.id,
+    title: p.title,
+    slug: p.slug,
+    price_pkr: Number(p.price_pkr) || 0,
+    image_url: p.image_url,
+    category: p.category,
+    manufacturer: p.manufacturer,
+    discount_pct: Number(p.discount_pct) || 0,
+    availability: p.availability,
+    rating: p.rating,
+    stock: Number(p.stock) || 0,
+    color: p.color,
+    tags: p.tags ?? null,
+  };
+}
 
 function isSupabaseConfigured() {
   const url = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -35,107 +53,47 @@ function isSupabaseConfigured() {
   return true;
 }
 
-function withTimeout<T>(promise: Promise<T>, ms = 800): Promise<T> {
-  let timeoutId: any;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => {
-      reject(new Error(`Timeout of ${ms}ms exceeded`));
-    }, ms);
-  });
-  return Promise.race([promise, timeoutPromise]).finally(() => {
-    clearTimeout(timeoutId);
-  });
+/**
+ * Storefront catalog is in-code (TYSH + hardware). Do not block first paint on
+ * Supabase or server-product sync — there is no products table, and empty/error
+ * responses used to hide the whole catalog.
+ */
+export async function fetchProducts(opts?: { category?: string; limit?: number }) {
+  await ensureTuyaCatalogLoaded();
+  initializeMockProductsOnClient();
+  return filterMockProducts(opts).map(toStorefrontProduct);
 }
 
-export async function fetchProducts(opts?: { category?: string; limit?: number }) {
-  initializeMockProductsOnClient();
-  await syncServerProducts();
-  if (!isSupabaseConfigured()) {
-    return filterMockProducts(opts);
-  }
-  try {
-    let q = supabase.from("products").select(LIST_FIELDS);
-    if (opts?.category) {
-      const values = getCategoryFilterValues(opts.category);
-      q = values.length === 1 ? q.eq("category", values[0]) : q.in("category", values);
-    }
-    const { data, error } = await withTimeout(q, 1500);
-    if (!error && data) {
-      const dbProducts = data as ProductRow[];
-      // Merge locally created products that aren't in Supabase yet
-      const localOnly = MOCK_PRODUCTS.filter(
-        (lp) => !dbProducts.some((d) => d.id === lp.id || d.slug === lp.slug),
-      );
-      let combined = [...localOnly, ...dbProducts];
-      if (opts?.category) {
-        combined = combined.filter((p) => productMatchesCategory(p.category, opts.category));
-      }
-      if (opts?.limit) combined = combined.slice(0, opts.limit);
-      return combined;
-    }
-  } catch {
-    /* fallback to mock catalog */
-  }
-  return filterMockProducts(opts);
+export async function fetchHomeProducts(limit = 24) {
+  const list = await fetchProducts();
+  return pickHomeFeaturedProductsWithFlags(list, limit);
 }
 
 export async function fetchProductBySlug(slug: string) {
+  await ensureTuyaCatalogLoaded();
   initializeMockProductsOnClient();
-  await syncServerProducts();
-  if (!slug) return getMockProductBySlug("");
-
-  // Check local catalog first (useful for freshly added local products)
-  const localMatch = getMockProductBySlug(slug);
-
-  if (!isSupabaseConfigured()) {
-    return localMatch;
-  }
-  try {
-    const { data, error } = await withTimeout(
-      supabase.from("products").select("*").eq("slug", slug).maybeSingle(),
-      1500,
-    );
-    if (!error && data) return data as ProductRow;
-
-    const { data: dataById, error: errById } = await withTimeout(
-      supabase.from("products").select("*").eq("id", slug).maybeSingle(),
-      1500,
-    );
-    if (!errById && dataById) return dataById as ProductRow;
-  } catch {
-    /* fallback to demo catalog */
-  }
-  return localMatch;
+  const product = getMockProductBySlug(slug || "");
+  if (!product || isDemoOrTestProduct(product)) return null;
+  return product;
 }
 
 export async function fetchRelatedProducts(category: string, excludeId: string, limit = 4) {
-  if (!isSupabaseConfigured()) {
-    return MOCK_PRODUCTS.filter(
-      (p) => p.id !== excludeId && productMatchesCategory(p.category, category),
-    ).slice(0, limit);
-  }
-  try {
-    const { data, error } = await withTimeout(
-      supabase
-        .from("products")
-        .select(LIST_FIELDS)
-        .eq("category", category)
-        .neq("id", excludeId)
-        .limit(limit),
-    );
-    if (error) throw error;
-    if (data?.length) return data as ProductRow[];
-  } catch {
-    /* mock */
-  }
+  await ensureTuyaCatalogLoaded();
+  initializeMockProductsOnClient();
   return MOCK_PRODUCTS.filter(
-    (p) => p.id !== excludeId && productMatchesCategory(p.category, category),
-  ).slice(0, limit);
+    (p) =>
+      p.id !== excludeId &&
+      !isDemoOrTestProduct(p) &&
+      productMatchesCategory(p.category, category),
+  )
+    .slice(0, limit)
+    .map(toStorefrontProduct);
 }
 
 export async function upsertProduct(
   payload: Partial<ProductRow> & { title: string; category: string },
 ) {
+  await ensureTuyaCatalogLoaded();
   const { id, availability, ...rest } = payload;
   const slug =
     payload.slug ??
@@ -145,7 +103,7 @@ export async function upsertProduct(
       .replace(/^-|-$/g, "");
 
   const fullLocal: ProductRow = {
-    id: id || `mock-${Date.now()}`,
+    id: id || `user-${Date.now()}`,
     title: payload.title,
     slug,
     description: payload.description || "",

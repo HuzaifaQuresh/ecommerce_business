@@ -1,13 +1,24 @@
-import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useNavigate, useRouterState, useSearch } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
-import type { AppRole } from "@/types/commerce";
+import { supabase } from "@/integrations/supabase/client";
+import { googleAuthError } from "@/lib/google-auth";
+import { consumeAuthNext, getAuthRedirectTo, rememberAuthNext, safeInternalPath } from "@/lib/auth-redirect";
+import { GoogleAuthButton } from "@/components/site/GoogleAuthButton";
+import {
+  persistPendingVerification,
+  resendSignupEmail,
+  completeEmailSignup,
+  verifyEmailError,
+} from "@/lib/verify-email";
+import { needsEmailVerification } from "@/lib/email-verified";
+import { isPasswordRecoveryPending, markPasswordRecovery, readAuthRedirectParams } from "@/lib/password-recovery";
+import { loginIntentFromPath, resolvePostLoginPath } from "@/lib/post-login";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ShieldCheck, Eye, EyeOff, Loader2, CheckCircle2, Lock } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { SmartZoneLogo } from "@/components/site/SmartZoneLogo";
 
 export const Route = createFileRoute("/auth")({
@@ -25,21 +36,66 @@ export const Route = createFileRoute("/auth")({
   validateSearch: (s: Record<string, unknown>) => ({
     redirect: typeof s.redirect === "string" ? s.redirect : undefined,
     tab: typeof s.tab === "string" ? s.tab : undefined,
+    code: typeof s.code === "string" ? s.code : undefined,
+    type: typeof s.type === "string" ? s.type : undefined,
+    token_hash: typeof s.token_hash === "string" ? s.token_hash : undefined,
+    token: typeof s.token === "string" ? s.token : undefined,
+    error: typeof s.error === "string" ? s.error : undefined,
+    error_description: typeof s.error_description === "string" ? s.error_description : undefined,
+    error_code: typeof s.error_code === "string" ? s.error_code : undefined,
+    email: typeof s.email === "string" ? s.email : undefined,
+    purpose: typeof s.purpose === "string" ? s.purpose : undefined,
   }),
-  component: Auth,
+  component: AuthLayout,
 });
+
+function AuthLayout() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname !== "/auth" && pathname !== "/auth/") return <Outlet />;
+  return (
+    <>
+      <RecoveryRedirect />
+      <Auth />
+    </>
+  );
+}
+
+function RecoveryRedirect() {
+  useEffect(() => {
+    const params = readAuthRedirectParams();
+    const type = params.get("type");
+    const hasAuthToken = Boolean(
+      params.get("code") || params.get("token_hash") || params.get("access_token") || params.get("token"),
+    );
+    if (type === "recovery") {
+      markPasswordRecovery();
+      window.location.replace(`/auth/reset-password${window.location.search}${window.location.hash}`);
+      return;
+    }
+    if (hasAuthToken) {
+      window.location.replace(`/auth/callback${window.location.search}${window.location.hash}`);
+    }
+  }, []);
+  return null;
+}
 
 /** Maps Supabase error messages to friendly copy */
 function friendlyError(msg: string): string {
   const m = msg.toLowerCase();
   if (m.includes("invalid login credentials") || m.includes("invalid email or password"))
-    return "Incorrect email or password. Double-check and try again.";
+    return "Incorrect email or password. If you do not have an account yet, use Sign Up first.";
   if (m.includes("email not confirmed"))
     return "Please confirm your email first — check your inbox for the verification link.";
   if (m.includes("user already registered"))
     return "An account with this email already exists. Use Sign In instead.";
   if (m.includes("password should be at least")) return "Password must be at least 6 characters.";
   if (m.includes("rate limit")) return "Too many attempts — wait a minute and try again.";
+  if (
+    m.includes("provider is not enabled") ||
+    m.includes("unsupported provider") ||
+    m.includes("validation_failed")
+  )
+    return "Google sign-in is not enabled yet. Add a Google OAuth Client ID in Supabase Auth → Providers → Google.";
   return msg;
 }
 
@@ -50,9 +106,11 @@ function Auth() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [oauthNotice, setOauthNotice] = useState<string | null>(null);
 
   useEffect(() => {
     document.title =
@@ -61,36 +119,42 @@ function Auth() {
         : "Sign In — SmartZone — IT Solutions, Smart Automation & Electronics";
   }, [activeTab]);
 
+  useEffect(() => {
+    rememberAuthNext(search.redirect);
+    const oauthError = search.error_description || search.error;
+    if (oauthError) {
+      setOauthNotice(googleAuthError(oauthError, search.error_code));
+    }
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) return;
+      if (isPasswordRecoveryPending()) {
+        navigate({ to: "/auth/reset-password", search: { tab: "signin" } });
+        return;
+      }
+      if (needsEmailVerification(data.session.user)) {
+        const address = data.session.user.email?.trim().toLowerCase();
+        if (address) persistPendingVerification(address, "signup");
+        void supabase.auth.signOut({ scope: "global" }).then(() => {
+          navigate({
+            to: "/auth/verify-email",
+            search: { tab: "signup", email: address, purpose: "signup", redirect: search.redirect },
+          });
+        });
+        return;
+      }
+      void redirectAfterAuth();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
+  }, []);
+
   /** Reads roles from DB and sends user to correct workspace */
   const redirectAfterAuth = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session) {
-      navigate({ to: "/" });
-      return;
-    }
-
-    if (search.redirect) {
-      navigate({ to: search.redirect as "/" });
-      return;
-    }
-
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", session.user.id);
-    const list = (roles ?? []).map((r) => r.role as AppRole);
-
-    if (list.includes("super_admin") || list.includes("admin")) {
-      navigate({ to: "/admin" });
-      return;
-    }
-    if (list.includes("vendor")) {
-      navigate({ to: "/vendor" });
-      return;
-    }
-    navigate({ to: "/account" });
+    const next = consumeAuthNext() || safeInternalPath(search.redirect);
+    const dest = await resolvePostLoginPath({
+      intent: loginIntentFromPath(next),
+      explicitNext: next,
+    });
+    navigate({ to: dest as "/", resetScroll: true });
   };
 
   const signIn = async () => {
@@ -106,6 +170,21 @@ function Auth() {
       setBusy(false);
 
       if (error) {
+        if (error.message.toLowerCase().includes("email not confirmed")) {
+          persistPendingVerification(email.trim().toLowerCase(), "signup");
+          await resendSignupEmail(email.trim().toLowerCase());
+          toast.error("Please verify your email first — we sent a new confirmation link.");
+          navigate({
+            to: "/auth/verify-email",
+            search: { tab: "signin", email: email.trim().toLowerCase(), purpose: "signup" },
+          });
+          return;
+        }
+        if (isPasswordRecoveryPending()) {
+          return toast.error(
+            "Open the password reset link in your email first. After you set a new password, sign in with that new password — not the old one.",
+          );
+        }
         return toast.error(friendlyError(error.message));
       }
 
@@ -117,53 +196,54 @@ function Auth() {
     }
   };
 
-  const signInWithGoogle = async () => {
-    setBusy(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-      if (error) {
-        setBusy(false);
-        toast.error(friendlyError(error.message));
-      }
-    } catch (err: any) {
-      setBusy(false);
-      toast.error(friendlyError(err?.message || "Failed to sign in with Google"));
-    }
-  };
-
   const signUp = async () => {
-    if (!email.trim()) return toast.error("Enter your email address");
+    const fullName = name.trim();
+    const address = email.trim().toLowerCase();
+    if (!fullName) return toast.error("Enter your full name");
+    if (!address) return toast.error("Enter your email address");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
+      return toast.error("Enter a valid email address");
+    }
     if (!password) return toast.error("Choose a password");
     if (password.length < 6) return toast.error("Password must be at least 6 characters");
+    if (password !== confirmPassword) return toast.error("Passwords do not match");
     setBusy(true);
 
     try {
       const { data, error } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
+        email: address,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: { full_name: name.trim() },
+          emailRedirectTo: getAuthRedirectTo("/auth/callback"),
+          data: { full_name: fullName },
         },
       });
 
-      setBusy(false);
-
       if (error) {
+        setBusy(false);
         return toast.error(friendlyError(error.message));
       }
 
-      if (data?.session || !isSupabaseConfigured()) {
-        toast.success("Account created — welcome!");
-        await redirectAfterAuth();
-      } else {
-        toast.success("Account created! Check your email for a confirmation link.");
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        setBusy(false);
+        return toast.error("An account with this email already exists. Use Sign In instead.");
       }
+
+      const mail = await completeEmailSignup(address, data.user?.id);
+      setBusy(false);
+      if (!mail.ok) {
+        toast.message(verifyEmailError(mail.error, "signup"));
+      } else if (mail.alreadyVerified) {
+        toast.success("This email is already verified. Sign in to continue.");
+        setActiveTab("signin");
+        return;
+      } else {
+        toast.success("Account created. Check your inbox — verify your email before you can sign in.");
+      }
+      navigate({
+        to: "/auth/verify-email",
+        search: { tab: "signup", email: address, purpose: "signup", redirect: search.redirect },
+      });
     } catch (err: any) {
       setBusy(false);
       toast.error(friendlyError(err?.message || "Failed to create account"));
@@ -178,91 +258,23 @@ function Auth() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-8rem)] grid lg:grid-cols-2">
-      {/* Left panel — branding tile */}
-      <div className="hidden lg:flex flex-col justify-between p-12 text-white bg-gradient-to-br from-[#0B192C] via-[#0F2C59] to-[#0052B4] relative overflow-hidden">
-        {/* Ambient background glows */}
-        <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-[#00A3E0]/15 blur-3xl pointer-events-none" />
-        <div className="absolute -left-20 -bottom-20 w-80 h-80 rounded-full bg-[#FF7A00]/15 blur-3xl pointer-events-none" />
-
-        <div className="relative z-10">
-          <Link to="/" className="inline-block mb-8 group" aria-label="SmartZone Home">
-            <SmartZoneLogo size="lg" dark={true} showTagline={true} />
-          </Link>
-
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-xs text-[#00A3E0] text-xs font-semibold uppercase tracking-wider mb-4 border border-white/10">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#FF7A00] animate-pulse" />
-            Official Portal
-          </div>
-
-          <h1 className="text-3xl xl:text-4xl font-black tracking-tight text-white leading-tight">
-            SmartZone
-            <span className="block text-xl xl:text-2xl font-semibold text-[#00A3E0] mt-1">
-              IT Solutions, Smart Automation & Electronics
-            </span>
-          </h1>
-          <p className="mt-4 text-slate-200 max-w-md leading-relaxed text-sm">
-            Pakistan's premier IT solutions, smart automation & commerce portal. Sign in to manage
-            orders, explore custom IoT solutions, and access your workspace.
-          </p>
-
-          <div className="mt-8 space-y-4 text-sm text-slate-200">
-            <div className="flex items-start gap-3">
-              <div className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-[#00A3E0] shrink-0 mt-0.5 border border-white/10">
-                <ShieldCheck className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="font-semibold text-white">Secure Encrypted Authentication</p>
-                <p className="text-xs text-slate-300">
-                  Industry-standard credentials protection with Supabase Auth
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-[#FF7A00] shrink-0 mt-0.5 border border-white/10">
-                <CheckCircle2 className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="font-semibold text-white">Real-Time Order Tracking</p>
-                <p className="text-xs text-slate-300">
-                  Monitor dispatch, track shipment status, and access receipts
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-[#38BDF8] shrink-0 mt-0.5 border border-white/10">
-                <Lock className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="font-semibold text-white">Personalized Workspace</p>
-                <p className="text-xs text-slate-300">
-                  Saved addresses, order history, and account settings in one place
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer info in the tile */}
-        <div className="relative z-10 pt-8 border-t border-white/10 flex items-center justify-between text-xs text-slate-300">
-          <span>Best Tech, Best Future</span>
-          <span className="text-slate-400">© {new Date().getFullYear()} SmartZone</span>
-        </div>
-      </div>
-
-      {/* Right panel — form */}
-      <div className="flex items-center justify-center px-4 py-10 sm:py-14 bg-slate-50/50">
+    <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4 py-10 sm:py-14 bg-slate-50/50">
         <div className="w-full max-w-md">
-          {/* Mobile logo */}
-          <div className="flex items-center justify-center mb-6 lg:hidden">
+          <div className="flex items-center justify-center mb-6">
             <Link to="/" aria-label="SmartZone Home">
               <SmartZoneLogo size="md" showTagline={true} />
             </Link>
           </div>
 
           <div className="rounded-2xl border bg-card p-6 sm:p-8 shadow-[var(--shadow-elevated)]">
+            {search.redirect === "/checkout" && (
+              <div className="mb-5 rounded-xl border border-[#FF7A00]/30 bg-[#FF7A00]/8 px-4 py-3 text-sm text-[#0B192C]">
+                <p className="font-semibold">Sign in to complete your order</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Your cart is saved. After Sign In or Sign Up you will return to checkout.
+                </p>
+              </div>
+            )}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid grid-cols-2 w-full h-11">
                 <TabsTrigger value="signin" className="min-h-[40px]">
@@ -274,33 +286,12 @@ function Auth() {
               </TabsList>
 
               <div className="mt-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={signInWithGoogle}
-                  disabled={busy}
-                  className="w-full min-h-[48px] font-medium flex items-center justify-center gap-2 hover:bg-muted/80"
-                >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24">
-                    <path
-                      fill="#4285F4"
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                    />
-                  </svg>
-                  Continue with Google
-                </Button>
+                {oauthNotice ? (
+                  <p className="mb-3 text-sm text-destructive leading-snug" role="alert">
+                    {oauthNotice}
+                  </p>
+                ) : null}
+                <GoogleAuthButton nextPath={search.redirect} disabled={busy} />
 
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center">
@@ -332,6 +323,7 @@ function Auth() {
                     <Label htmlFor="si-pw">Password</Label>
                     <Link
                       to="/auth/forgot-password"
+                      search={{ tab: "signin" }}
                       className="text-xs text-primary hover:underline font-medium"
                     >
                       Forgot password?
@@ -434,6 +426,19 @@ function Auth() {
                   </div>
                 </div>
 
+                <div className="space-y-1.5">
+                  <Label htmlFor="su-pw2">Confirm password</Label>
+                  <Input
+                    id="su-pw2"
+                    type={showPw ? "text" : "password"}
+                    autoComplete="new-password"
+                    placeholder="Re-enter your password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                  />
+                </div>
+
                 <Button
                   onClick={signUp}
                   disabled={busy}
@@ -447,6 +452,10 @@ function Auth() {
                     "Create Account"
                   )}
                 </Button>
+                <p className="text-center text-xs text-muted-foreground leading-relaxed">
+                  We email a 6-digit code and a Confirm email button. You cannot sign in until that
+                  mailbox is verified.
+                </p>
 
                 <div className="text-center pt-2">
                   <span className="text-xs text-muted-foreground">Already have an account? </span>
@@ -466,8 +475,13 @@ function Auth() {
             By signing in or creating an account, you agree to SmartZone's Terms of Service and
             Privacy Policy.
           </p>
+          <p className="text-center text-xs text-muted-foreground mt-3">
+            Are you a seller?{" "}
+            <Link to="/vendor/auth" className="font-semibold text-[#0052B4] hover:underline">
+              Open Seller Center
+            </Link>
+          </p>
         </div>
-      </div>
     </div>
   );
 }

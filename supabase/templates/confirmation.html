@@ -1,0 +1,13 @@
+<h2 style="margin:0 0 12px;font-family:Arial,sans-serif;color:#0B192C;">Confirm your SmartZone email</h2>
+<p style="font-family:Arial,sans-serif;color:#334155;line-height:1.5;">
+  Welcome to SmartZone. Confirm <strong>{{ .Email }}</strong> with this 6-digit code:
+</p>
+<p style="font-family:Arial,sans-serif;font-size:28px;letter-spacing:8px;font-weight:700;color:#0B192C;margin:16px 0;">
+  {{ .Token }}
+</p>
+<p>
+  <a href="https://smartzone.pk/auth/callback?token_hash={{ .TokenHash }}&type=signup" style="display:inline-block;background:#FF7A00;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;font-family:Arial,sans-serif;font-weight:700;">
+    Confirm email
+  </a>
+</p>
+<p style="font-family:Arial,sans-serif;color:#64748b;font-size:12px;">If you did not create this account, you can ignore this email.</p>

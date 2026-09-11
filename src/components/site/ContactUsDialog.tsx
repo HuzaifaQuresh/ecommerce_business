@@ -10,7 +10,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Phone, MapPin, Clock, Send, CheckCircle2 } from "lucide-react";
+import { Mail, MapPin, Clock, Send, CheckCircle2 } from "lucide-react";
+import { submitInboxLead } from "@/api/inbox";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { contactEmailFromSettings, officeAddressFromSettings, officeMapsUrlFromSettings } from "@/lib/storefront-contact";
 
 interface ContactUsDialogProps {
   open: boolean;
@@ -18,6 +21,10 @@ interface ContactUsDialogProps {
 }
 
 export function ContactUsDialog({ open, onOpenChange }: ContactUsDialogProps) {
+  const { data: settings } = useSiteSettings();
+  const officeAddress = officeAddressFromSettings(settings);
+  const officeMapsUrl = officeMapsUrlFromSettings(settings);
+  const contactEmail = contactEmailFromSettings(settings);
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [subject, setSubject] = React.useState("");
@@ -37,19 +44,25 @@ export function ContactUsDialog({ open, onOpenChange }: ContactUsDialogProps) {
     setIsSubmitting(true);
 
     try {
-      // Simulate API call to save lead or contact query
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await submitInboxLead({
+        data: {
+          source: "contact_form",
+          name: name.trim(),
+          email: email.trim(),
+          subject: subject.trim(),
+          message: message.trim(),
+        },
+      });
 
       setIsSuccess(true);
-      toast.success("Message sent! Our IoT experts will contact you soon.");
+      toast.success(`Message sent to ${contactEmail}. We will reply shortly.`);
 
-      // Reset form
       setName("");
       setEmail("");
       setSubject("");
       setMessage("");
     } catch {
-      toast.error("Failed to send message. Please try again.");
+      toast.error(`Failed to send message. Email us at ${contactEmail}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -83,9 +96,18 @@ export function ContactUsDialog({ open, onOpenChange }: ContactUsDialogProps) {
                     <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
                       Office Address
                     </h4>
-                    <p className="text-sm text-slate-400 mt-1">
-                      Plot 14-C, Sector I-9, Industrial Area, Islamabad, Pakistan
-                    </p>
+                    {officeMapsUrl ? (
+                      <a
+                        href={officeMapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-slate-400 mt-1 hover:text-[#00A3E0] transition-colors block"
+                      >
+                        {officeAddress}
+                      </a>
+                    ) : (
+                      <p className="text-sm text-slate-400 mt-1">{officeAddress}</p>
+                    )}
                   </div>
                 </div>
 
@@ -106,7 +128,12 @@ export function ContactUsDialog({ open, onOpenChange }: ContactUsDialogProps) {
                     <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
                       Email Inquiry
                     </h4>
-                    <p className="text-sm text-slate-400 mt-1">sales@smartzone.pk</p>
+                    <a
+                      href={`mailto:${contactEmail}`}
+                      className="text-sm text-slate-400 mt-1 hover:text-[#00A3E0] transition-colors block"
+                    >
+                      {contactEmail}
+                    </a>
                   </div>
                 </div>
 

@@ -37,8 +37,20 @@ export const MOCK_DELIVERY_METHODS = DEFAULT_DELIVERY_METHODS;
 
 export const MOCK_SITE_SETTINGS: Record<string, unknown> = {
   site_name: "SmartZone",
-  contact_email: "sales@smartzone.pk",
+  contact_email: "info@smartzone.pk",
   contact_phone: "+92 51 8431111",
+  office_address: "Blue Area, Islamabad, Pakistan",
+  office_maps_url: "",
+  social_links: {
+    facebook: "",
+    instagram: "",
+    linkedin: "",
+    youtube: "",
+    twitter: "",
+  },
+  whatsapp_number: "+92 332 3059259",
+  whatsapp_message: "Hello SmartZone Team",
+  whatsapp_enabled: true,
   tax_rate_pct: 17,
   tax_label: "Sales Tax (GST)",
   free_shipping_min_pkr: 20000,

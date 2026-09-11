@@ -21,9 +21,15 @@ function withTimeout<T>(promise: Promise<T>, ms = 800): Promise<T> {
   });
 }
 
+export const SITE_SETTINGS_QUERY_KEY = ["site-settings"] as const;
+export const SITE_SETTINGS_STALE_MS = 60_000;
+
 export async function fetchSiteSettings() {
   try {
-    const { data, error } = await withTimeout(supabase.from("site_settings").select("key,value"));
+    const { data, error } = await withTimeout(
+      supabase.from("site_settings").select("key,value"),
+      2500,
+    );
     if (error) throw error;
     if (data?.length) {
       const map: Record<string, unknown> = {};
@@ -88,4 +94,7 @@ export async function updateSiteSetting(key: string, value: unknown) {
     .from("site_settings")
     .upsert({ key, value: value as never, updated_at: new Date().toISOString() });
   if (error) throw error;
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("nexus-settings-update"));
+  }
 }

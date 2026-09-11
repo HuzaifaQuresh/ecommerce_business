@@ -11,7 +11,7 @@ export function RoleBadge({
   size?: "sm" | "md";
   className?: string;
 }) {
-  const meta = ROLE_CATALOG[role];
+  const meta = ROLE_CATALOG[role] ?? ROLE_CATALOG.user;
   return (
     <span
       className={cn(

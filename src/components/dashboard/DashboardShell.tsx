@@ -122,7 +122,7 @@ export function DashboardShell({
 
   const onSignOut = async () => {
     await signOut();
-    navigate({ to: "/auth" });
+    navigate({ to: variant === "vendor" ? "/vendor/auth" : "/auth" });
   };
 
   const sidebar = (

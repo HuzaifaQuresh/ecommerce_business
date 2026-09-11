@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,18 +14,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SectionCard } from "@/components/site/PageLayout";
-import { RoleAccessGrid } from "@/components/dashboard/RoleAccessGrid";
-import { primaryRole, ROLE_CATALOG } from "@/lib/roles";
+import { AccountWorkspaceCard } from "@/components/account/AccountWorkspaceCard";
 import { PK_PROVINCES } from "@/lib/pakistan-address";
 import { toast } from "sonner";
-import { Shield, Mail, Phone, User, MapPin, Crown } from "lucide-react";
+import { Mail, Phone, User, MapPin } from "lucide-react";
 
 export const Route = createFileRoute("/account/")({ component: AccountProfile });
 
 function AccountProfile() {
-  const { user, roles } = useAuth();
-  const primary = primaryRole(roles.length ? roles : ["user"]);
-  const meta = ROLE_CATALOG[primary];
+  const { user, refreshSession } = useAuth();
 
   const { data, refetch } = useQuery({
     queryKey: ["profile", user?.id],
@@ -44,14 +41,18 @@ function AccountProfile() {
   const saveProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const name = String(fd.get("name")).trim();
+    if (!name) return toast.error("Enter your name");
     const { error } = await supabase
       .from("profiles")
       .update({
-        full_name: String(fd.get("name")).trim(),
+        full_name: name,
         phone: String(fd.get("phone")).trim(),
       })
       .eq("id", user!.id);
     if (error) return toast.error(error.message);
+    await supabase.auth.updateUser({ data: { full_name: name } });
+    await refreshSession();
     toast.success("Profile updated");
     refetch();
   };
@@ -182,33 +183,8 @@ function AccountProfile() {
         </form>
       </SectionCard>
 
-      <SectionCard title="Your role on SmartZone">
-        <div className="flex items-start gap-3 mb-4 p-4 rounded-lg bg-muted/40 border">
-          <Shield className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold">{meta.label}</p>
-            <p className="text-sm text-muted-foreground mt-1">{meta.description}</p>
-          </div>
-        </div>
-        <RoleAccessGrid compact highlight={primary} />
-        <p className="text-xs text-muted-foreground mt-4">
-          Need vendor or admin access? Contact your platform super admin or use the setup tool
-          below.
-        </p>
-        <div className="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium flex items-center gap-1.5">
-              <Crown className="h-4 w-4 text-amber-500 shrink-0" />
-              No super admin yet?
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              If your account doesn't have admin access, use the one-time setup page to activate it.
-            </p>
-          </div>
-          <Button asChild variant="outline" size="sm" className="shrink-0">
-            <Link to="/setup">Activate super admin</Link>
-          </Button>
-        </div>
+      <SectionCard title="Account access">
+        <AccountWorkspaceCard />
       </SectionCard>
     </div>
   );

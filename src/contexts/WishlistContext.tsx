@@ -27,25 +27,29 @@ const WishlistContext = createContext<WishlistContextType | undefined>(undefined
 const LOCAL_STORAGE_KEY = "nexusiot_wishlist_v1";
 
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<WishlistItem[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [items, setItems] = useState<WishlistItem[]>([]);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    try {
+      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (stored) setItems(JSON.parse(stored));
+    } catch {
+      /* ignore */
+    }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items));
     } catch (e) {
       console.warn("Failed to persist wishlist:", e);
     }
-  }, [items]);
+  }, [items, hydrated]);
 
   const wishlistIds = items.map((i) => i.id);
 

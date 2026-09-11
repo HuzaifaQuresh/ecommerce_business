@@ -1,8 +1,27 @@
-import { useQuery } from "@tanstack/react-query";
-import { fetchCheckoutConfig, fetchPaymentMethods, fetchSiteSettings } from "@/api/settings";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  fetchCheckoutConfig,
+  fetchPaymentMethods,
+  fetchSiteSettings,
+  SITE_SETTINGS_QUERY_KEY,
+  SITE_SETTINGS_STALE_MS,
+} from "@/api/settings";
 
 export function useSiteSettings() {
-  return useQuery({ queryKey: ["site-settings"], queryFn: fetchSiteSettings, staleTime: 0 });
+  const qc = useQueryClient();
+  useEffect(() => {
+    const refresh = () => {
+      void qc.invalidateQueries({ queryKey: SITE_SETTINGS_QUERY_KEY });
+    };
+    window.addEventListener("nexus-settings-update", refresh);
+    return () => window.removeEventListener("nexus-settings-update", refresh);
+  }, [qc]);
+  return useQuery({
+    queryKey: SITE_SETTINGS_QUERY_KEY,
+    queryFn: fetchSiteSettings,
+    staleTime: SITE_SETTINGS_STALE_MS,
+  });
 }
 
 export function usePaymentMethods() {

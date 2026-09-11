@@ -1,13 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchOrders } from "@/api/orders";
+import { fetchOrders, updateOrderStatus } from "@/api/orders";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtPKR } from "@/lib/format";
-import { formatDeliveryDate } from "@/lib/order-fulfillment";
+import { formatDeliveryDate, type OrderStatus } from "@/lib/order-fulfillment";
 import { DashboardPageHeader, ResponsiveScroll } from "@/components/site/PageLayout";
-import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
-import { MOCK_ORDERS } from "@/lib/mock-data";
+import { OrderStatusSelect } from "@/components/orders/OrderStatusSelect";
 import { Eye, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/orders/")({
   component: Orders,
@@ -28,6 +28,7 @@ const ALL_STATUSES = ["pending", "processing", "shipped", "delivered", "cancelle
 function Orders() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [savingId, setSavingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -61,25 +62,31 @@ function Orders() {
 
   const { data } = useQuery({
     queryKey: ["admin-orders"],
-    queryFn: async () => {
-      try {
-        const list = await fetchOrders();
-        if (list.length) return list;
-      } catch {
-        /* demo */
-      }
-      return MOCK_ORDERS;
-    },
+    queryFn: () => fetchOrders(),
     staleTime: 0,
     refetchOnMount: "always",
   });
+
+  const changeStatus = async (orderId: string, status: OrderStatus) => {
+    setSavingId(orderId);
+    try {
+      await updateOrderStatus(orderId, status);
+      toast.success("Order status updated");
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["order-detail", orderId] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not update status");
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return (data ?? []).filter((o) => {
       if (filterStatus !== "all" && o.status !== filterStatus) return false;
       if (q) {
-        const haystack = [o.customer_name, o.phone, o.id, o.city, o.address]
+        const haystack = [o.customer_name, o.phone, o.id, o.city, o.address, o.payment_method]
           .join(" ")
           .toLowerCase();
         if (!haystack.includes(q)) return false;
@@ -92,7 +99,7 @@ function Orders() {
     <div className="space-y-6">
       <DashboardPageHeader
         title="Orders"
-        description="Shipping addresses, line items, dispatch status, and expected delivery dates."
+        description="Change dispatch status inline. Open Details for tracking, line items, and print receipt."
       />
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -120,19 +127,25 @@ function Orders() {
         </Select>
       </div>
 
-      {/* Mobile Card List */}
       <div className="block md:hidden space-y-4">
         {filtered.map((o) => (
           <div key={o.id} className="bg-card border rounded-xl p-4 shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <span className="font-mono text-xs font-semibold text-muted-foreground">
                 #{o.id.slice(0, 8).toUpperCase()}
               </span>
-              <OrderStatusBadge status={o.status} />
+              <OrderStatusSelect
+                value={o.status}
+                disabled={savingId === o.id}
+                onChange={(status) => changeStatus(o.id, status)}
+              />
             </div>
             <div>
               <div className="font-medium text-foreground">{o.customer_name}</div>
               <div className="text-xs text-muted-foreground">{o.phone}</div>
+              <div className="text-[11px] text-muted-foreground mt-1 uppercase">
+                Pay: {String(o.payment_method ?? "cod").replace(/_/g, " ")}
+              </div>
             </div>
             <div className="text-xs text-muted-foreground border-t pt-2 space-y-1">
               <div>
@@ -164,15 +177,15 @@ function Orders() {
         )}
       </div>
 
-      {/* Desktop Table */}
       <div className="hidden md:block">
         <ResponsiveScroll>
-          <table className="w-full text-sm min-w-[900px]">
+          <table className="w-full text-sm min-w-[980px]">
             <thead className="bg-muted/60 text-left">
               <tr>
                 <th className="p-3 font-semibold">Order</th>
                 <th className="p-3 font-semibold">Customer</th>
                 <th className="p-3 font-semibold">Ship to</th>
+                <th className="p-3 font-semibold">Payment</th>
                 <th className="p-3 font-semibold">Est. delivery</th>
                 <th className="p-3 font-semibold">Total</th>
                 <th className="p-3 font-semibold">Status</th>
@@ -194,6 +207,9 @@ function Orders() {
                       {(o as any).province ? `, ${(o as any).province}` : ""}
                     </div>
                   </td>
+                  <td className="p-3 text-xs uppercase tracking-wide text-muted-foreground">
+                    {String(o.payment_method ?? "cod").replace(/_/g, " ")}
+                  </td>
                   <td className="p-3 text-xs whitespace-nowrap">
                     {formatDeliveryDate(
                       (o as any).expected_delivery_at,
@@ -202,7 +218,11 @@ function Orders() {
                   </td>
                   <td className="p-3 font-semibold tabular-nums">{fmtPKR(Number(o.total_pkr))}</td>
                   <td className="p-3">
-                    <OrderStatusBadge status={o.status} />
+                    <OrderStatusSelect
+                      value={o.status}
+                      disabled={savingId === o.id}
+                      onChange={(status) => changeStatus(o.id, status)}
+                    />
                   </td>
                   <td className="p-3">
                     <Button asChild variant="outline" size="sm">
@@ -216,7 +236,7 @@ function Orders() {
               ))}
               {!filtered.length && (
                 <tr>
-                  <td colSpan={7} className="p-10 text-center text-muted-foreground">
+                  <td colSpan={8} className="p-10 text-center text-muted-foreground">
                     {search || filterStatus !== "all"
                       ? "No orders match your filters."
                       : "No orders yet."}
@@ -227,10 +247,6 @@ function Orders() {
           </table>
         </ResponsiveScroll>
       </div>
-
-      <p className="text-xs text-muted-foreground">
-        Showing {filtered.length} of {data?.length ?? 0} orders.
-      </p>
     </div>
   );
 }

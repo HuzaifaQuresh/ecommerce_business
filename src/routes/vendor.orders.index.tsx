@@ -5,7 +5,7 @@ import { fmtPKR } from "@/lib/format";
 import { formatDeliveryDate } from "@/lib/order-fulfillment";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
 import { DashboardPageHeader, ResponsiveScroll } from "@/components/site/PageLayout";
-import { MOCK_ORDERS, getVendorMockProducts } from "@/lib/mock-data";
+import { getVendorMockProducts } from "@/lib/mock-data";
 import { fetchOrders, fetchOrdersWithItems } from "@/api/orders";
 import { Eye, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,7 @@ function VendorOrders() {
           const allOrders = await fetchOrdersWithItems();
           // Filter to only those containing this vendor's products
           return allOrders.filter((o) =>
-            o.items.some((item) => item.product_id && productIds.includes(item.product_id)),
+            (o.items ?? []).some((item) => item.product_id && productIds.includes(item.product_id)),
           );
         } else {
           // Staff preview — platform-wide with limit
@@ -52,7 +52,7 @@ function VendorOrders() {
       } catch (err) {
         console.warn("Error loading vendor orders:", err);
       }
-      return MOCK_ORDERS;
+      return [];
     },
   });
 

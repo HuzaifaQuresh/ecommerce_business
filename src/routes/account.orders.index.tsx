@@ -45,13 +45,14 @@ function AccountOrders() {
   };
 
   const filteredOrders = (data ?? []).filter((o) => {
+    const items = o.items ?? [];
     if (statusFilter !== "all" && o.status !== statusFilter) return false;
     if (!filterQuery.trim()) return true;
     const q = filterQuery.toLowerCase();
     const matchId = o.id.toLowerCase().includes(q);
     const matchEmail = o.email?.toLowerCase().includes(q);
     const matchName = o.customer_name?.toLowerCase().includes(q);
-    const matchItems = o.items.some((i) => i.title.toLowerCase().includes(q));
+    const matchItems = items.some((i) => (i.title ?? "").toLowerCase().includes(q));
     return matchId || matchEmail || matchName || matchItems;
   });
 
@@ -149,7 +150,10 @@ function AccountOrders() {
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredOrders.map((o) => (
+              {filteredOrders.map((o) => {
+                const items = o.items ?? [];
+                const first = items[0];
+                return (
                 <Link
                   key={o.id}
                   to="/account/orders/$orderId"
@@ -166,8 +170,8 @@ function AccountOrders() {
                       </div>
                       <p className="font-semibold text-lg mt-2">{fmtPKR(Number(o.total_pkr))}</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {o.items.length} item{o.items.length !== 1 ? "s" : ""}
-                        {o.items[0] && ` · ${o.items[0].title}${o.items.length > 1 ? "…" : ""}`}
+                        {items.length} item{items.length !== 1 ? "s" : ""}
+                        {first && ` · ${first.title}${items.length > 1 ? "…" : ""}`}
                       </p>
                       <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
                         <span className="inline-flex items-center gap-1">
@@ -186,7 +190,8 @@ function AccountOrders() {
                     <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary shrink-0 self-center" />
                   </div>
                 </Link>
-              ))}
+                );
+              })}
             </div>
           )}
         </SectionCard>

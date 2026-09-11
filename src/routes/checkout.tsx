@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { CheckCircle2, Tag, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { RequireAuth } from "@/components/auth/RequireAuth";
 import { PageContainer, PageHeader, EmptyState } from "@/components/site/PageLayout";
 import {
   CheckoutOrderSummary,
@@ -40,8 +41,16 @@ import { StripePaymentWrapper } from "@/components/checkout/StripePaymentWrapper
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({ meta: [{ title: "Checkout — SmartZone Pakistan" }] }),
-  component: Checkout,
+  component: CheckoutPage,
 });
+
+function CheckoutPage() {
+  return (
+    <RequireAuth>
+      <Checkout />
+    </RequireAuth>
+  );
+}
 
 const schema = z.object({
   customer_name: z.string().trim().min(2).max(100),
@@ -314,8 +323,13 @@ function Checkout() {
     setSubmitting(true);
     try {
       const {
-        data: { user },
+        data: { user: authUser },
       } = await supabase.auth.getUser();
+      if (!authUser) {
+        toast.error("Sign in to complete your order");
+        navigate({ to: "/auth", search: { redirect: "/checkout", tab: "signin" } });
+        return;
+      }
       const order = await placeOrder({
         ...parsed.data,
         subtotal_pkr: totals.subtotal,
@@ -327,7 +341,7 @@ function Checkout() {
         discount_pkr: discount,
         voucher_code: appliedCode,
         payment_method: paymentMethod,
-        user_id: user?.id ?? null,
+        user_id: authUser.id,
         province: parsed.data.province,
         postal_code: parsed.data.postal_code || undefined,
         landmark: parsed.data.landmark || undefined,
@@ -405,7 +419,7 @@ function Checkout() {
     <PageContainer size="lg">
       <PageHeader
         title="Secure checkout"
-        description="Pakistan-wide delivery · PKR pricing · GST shown before you pay"
+        description={`Signed in as ${user?.email ?? "your account"} · Pakistan-wide delivery · GST shown before you pay`}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,380px)] gap-6 lg:gap-8">

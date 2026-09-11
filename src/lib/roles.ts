@@ -21,7 +21,7 @@ export const ROLE_CATALOG: Record<AppRole, RoleMeta> = {
     description: "Full platform control including user roles, vendors, and all admin modules.",
     access: [
       "Everything in Admin",
-      "Users & Roles (/admin/users)",
+      "Users & Roles",
       "Vendor records & commissions",
       "Site settings & payment methods",
     ],
@@ -74,6 +74,13 @@ export const ROLE_CATALOG: Record<AppRole, RoleMeta> = {
 };
 
 export const ROLE_ORDER: AppRole[] = ["super_admin", "admin", "vendor", "user"];
+
+export function normalizeRole(role: string | null | undefined): AppRole | null {
+  if (!role) return null;
+  if (role === "customer" || role === "user") return "user";
+  if (role === "admin" || role === "super_admin" || role === "vendor") return role;
+  return null;
+}
 
 export function primaryRole(roles: AppRole[]): AppRole {
   for (const r of ROLE_ORDER) {

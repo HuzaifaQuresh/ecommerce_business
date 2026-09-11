@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/hooks/useAuth";
 import { useCheckoutConfig } from "@/hooks/useSiteSettings";
 import { computeCheckoutTotals } from "@/lib/checkout-totals";
 import { fmtPKR } from "@/lib/format";
@@ -15,6 +16,7 @@ export const Route = createFileRoute("/cart")({
 
 function CartPage() {
   const { items, setQty, remove, subtotal, clear } = useCart();
+  const { user } = useAuth();
   const { data: config } = useCheckoutConfig();
 
   const estimate = useMemo(() => {
@@ -153,7 +155,13 @@ function CartPage() {
             className="w-full min-h-[48px] bg-[#FF7A00] hover:bg-[#E56E00] text-white font-bold text-base shadow-sm transition"
             size="lg"
           >
-            <Link to="/checkout">Proceed to Checkout</Link>
+            {user ? (
+              <Link to="/checkout">Proceed to Checkout</Link>
+            ) : (
+              <Link to="/auth" search={{ redirect: "/checkout", tab: "signin" }}>
+                Sign in to checkout
+              </Link>
+            )}
           </Button>
         </aside>
       </div>

@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "smartzone-inbox",
+  "main": "workers/inbox.ts",
+  "compatibility_date": "2026-09-06",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "kv_namespaces": [
+    {
+      "binding": "INBOX",
+      "id": "b90e185fa3ae45f9999c863a2aaeae6f"
+    }
+  ],
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "destination_address": "huzaifaqur67@gmail.com"
+    }
+  ],
+  "vars": {
+    "FROM_EMAIL": "info@smartzone.pk",
+    "FORWARD_TO": "huzaifaqur67@gmail.com"
+  }
+}

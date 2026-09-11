@@ -82,7 +82,6 @@
   }
   html {
     -webkit-text-size-adjust: 100%;
-    scroll-behavior: smooth;
   }
   body {
     @apply bg-background text-foreground;
@@ -102,6 +101,7 @@
 @layer utilities {
   .storefront-main {
     padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+    overflow-x: clip;
   }
   @media (min-width: 768px) {
     .storefront-main {

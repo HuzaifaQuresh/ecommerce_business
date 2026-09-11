@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 import { MOCK_PRODUCTS } from "@/lib/mock-catalog";
 import { MOCK_SITE_SETTINGS, MOCK_VOUCHERS, MOCK_ORDERS } from "@/lib/mock-data";
+import { snapshotAuthRedirectParams } from "@/lib/auth-url-snapshot";
 
 export function isSupabaseConfigured(): boolean {
   const url = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -30,6 +31,7 @@ export function isSupabaseConfigured(): boolean {
 }
 
 function createSupabaseClient() {
+  snapshotAuthRedirectParams();
   const url =
     import.meta.env.VITE_SUPABASE_URL ||
     process.env.SUPABASE_URL ||
@@ -44,6 +46,8 @@ function createSupabaseClient() {
       storage: typeof window !== "undefined" ? localStorage : undefined,
       persistSession: true,
       autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: "pkce",
     },
   });
 }
@@ -576,7 +580,41 @@ function createMockQueryBuilder(initialData: any, table?: string) {
 export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>, {
   get(_, prop, receiver) {
     if (!_supabase) _supabase = createSupabaseClient();
-    const configured = isSupabaseConfigured();
+
+    // Real Auth/profile tables when keys are present. Catalog tables stay on
+    // the local mock until this Supabase project is fully migrated.
+    if (isSupabaseConfigured()) {
+      const liveTables = new Set([
+        "user_roles",
+        "profiles",
+        "vendors",
+        "vendor_applications",
+        "audit_logs",
+        "site_settings",
+        "orders",
+        "order_items",
+      ]);
+      if (prop === "from") {
+        return (table: string) => {
+          if (liveTables.has(table)) {
+            return (_supabase as any).from(table);
+          }
+          const tableData = getMockTableData(table, getActiveAuthUser());
+          return createMockQueryBuilder(tableData, table);
+        };
+      }
+      if (prop === "rpc") {
+        return (fn: string, args?: Record<string, unknown>, options?: Record<string, unknown>) =>
+          args === undefined
+            ? (_supabase as any).rpc(fn, {}, options)
+            : (_supabase as any).rpc(fn, args, options);
+      }
+      const value = Reflect.get(_supabase, prop, _supabase);
+      if (typeof value === "function") return value.bind(_supabase);
+      return value;
+    }
+
+    const configured = false;
     const activeUser = getActiveAuthUser();
 
     if (prop === "auth") {
@@ -943,8 +981,97 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
           }
           return { data: { provider, url: "" }, error: null };
         },
-        resetPasswordForEmail: async () => ({ data: {}, error: null }),
-        updateUser: async () => ({ data: {}, error: null }),
+        resetPasswordForEmail: async (email?: string) => {
+          const em = (email || "").trim().toLowerCase();
+          if (!em) {
+            return { data: {}, error: new Error("Enter your email address") };
+          }
+          if (isClient) {
+            sessionStorage.setItem("nexus_password_reset_email", em);
+            localStorage.setItem("sz_password_recovery", String(Date.now()));
+            const accounts = getRegisteredAccounts();
+            let found = accounts.find((a) => a.email.toLowerCase() === em);
+            if (!found) {
+              found = {
+                id: "usr-" + Math.random().toString(36).substring(2, 9),
+                email: em,
+                password: "",
+                full_name: em.split("@")[0],
+                role: "user",
+              };
+              const customStr = localStorage.getItem("nexus_registered_users");
+              const registered = customStr ? JSON.parse(customStr) : [];
+              registered.push(found);
+              localStorage.setItem("nexus_registered_users", JSON.stringify(registered));
+            }
+            localStorage.setItem(
+              "nexus_local_user",
+              JSON.stringify({
+                id: found.id,
+                email: found.email,
+                full_name: found.full_name,
+                role: found.role || "user",
+              }),
+            );
+            window.dispatchEvent(new Event("nexus-auth-update"));
+          }
+          return { data: {}, error: null };
+        },
+        updateUser: async (attributes: { password?: string; data?: Record<string, unknown> } = {}) => {
+          const active = getActiveAuthUser();
+          if (!active) {
+            return { data: { user: null }, error: new Error("Auth session missing") };
+          }
+          if (attributes.password) {
+            if (attributes.password.length < 6) {
+              return {
+                data: { user: null },
+                error: new Error("Password should be at least 6 characters"),
+              };
+            }
+            const customStr = localStorage.getItem("nexus_registered_users");
+            const registered = customStr ? JSON.parse(customStr) : [];
+            const idx = registered.findIndex(
+              (a: { email?: string; id?: string }) =>
+                a.email?.toLowerCase() === active.email.toLowerCase() || a.id === active.id,
+            );
+            if (idx >= 0) {
+              registered[idx].password = attributes.password;
+            } else {
+              registered.push({
+                id: active.id,
+                email: active.email,
+                password: attributes.password,
+                full_name: active.full_name,
+                role: active.role,
+              });
+            }
+            localStorage.setItem("nexus_registered_users", JSON.stringify(registered));
+            sessionStorage.removeItem("nexus_password_reset_email");
+            localStorage.removeItem("sz_password_recovery");
+          }
+          if (attributes.data && isClient) {
+            const next = {
+              ...active,
+              full_name: String(attributes.data.full_name ?? active.full_name),
+            };
+            localStorage.setItem("nexus_local_user", JSON.stringify(next));
+            window.dispatchEvent(new Event("nexus-auth-update"));
+          }
+          return { data: { user: mockUser }, error: null };
+        },
+        verifyOtp: async () => ({
+          data: { session: mockSession, user: mockUser },
+          error: mockSession ? null : new Error("Invalid or expired token"),
+        }),
+        exchangeCodeForSession: async () => ({
+          data: { session: mockSession, user: mockUser },
+          error: mockSession ? null : new Error("Invalid or expired session"),
+        }),
+        setSession: async () => ({
+          data: { session: mockSession, user: mockUser },
+          error: mockSession ? null : new Error("Invalid or expired session"),
+        }),
       };
     }
 
@@ -956,9 +1083,80 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
     }
 
     if (prop === "rpc") {
-      if (!configured || activeUser) {
-        return async () => ({ data: null, error: null });
-      }
+      return async (fn: string, args?: Record<string, unknown>) => {
+        if (fn === "staff_list_users") {
+          const users = getAllMockUsers(activeUser);
+          return {
+            data: users.map((u) => ({
+              user_id: u.id,
+              email: u.email,
+              full_name: u.full_name,
+              phone: u.phone ?? null,
+              role: u.role,
+              created_at: new Date().toISOString(),
+            })),
+            error: null,
+          };
+        }
+
+        if (fn === "admin_assign_role" || fn === "staff_assign_role_by_email") {
+          const targetId = String(args?._target_user_id ?? "");
+          const emailKey = String(args?._email ?? "").toLowerCase();
+          const newRole = String(args?._new_role ?? "user");
+          const users = getAllMockUsers(activeUser);
+          const found =
+            users.find((u) => u.id === targetId) ||
+            users.find((u) => String(u.email || "").toLowerCase() === emailKey);
+          if (!found) {
+            return {
+              data: null,
+              error: new Error(
+                fn === "staff_assign_role_by_email"
+                  ? "No SmartZone account with that email. Ask them to sign up first."
+                  : "Missing user",
+              ),
+            };
+          }
+          if (isClient) {
+            const overrides = JSON.parse(localStorage.getItem("nexus_user_roles") || "{}");
+            overrides[found.id] = newRole;
+            if (found.email) overrides[found.email] = newRole;
+            localStorage.setItem("nexus_user_roles", JSON.stringify(overrides));
+            const localUser = getActiveAuthUser();
+            if (localUser && (localUser.id === found.id || localUser.email === found.email)) {
+              localStorage.setItem(
+                "nexus_local_user",
+                JSON.stringify({ ...localUser, role: newRole }),
+              );
+              window.dispatchEvent(new Event("nexus-auth-update"));
+            }
+          }
+          return {
+            data: { ok: true, user_id: found.id, new_role: newRole, old_role: found.role },
+            error: null,
+          };
+        }
+
+        if (fn === "bootstrap_super_admin") {
+          const localUser = getActiveAuthUser();
+          if (!localUser) {
+            return { data: null, error: new Error("Sign in required") };
+          }
+          if (isClient) {
+            const next = { ...localUser, role: "super_admin" };
+            localStorage.setItem("nexus_local_user", JSON.stringify(next));
+            localStorage.setItem("nexus_demo_role", "super_admin");
+            const overrides = JSON.parse(localStorage.getItem("nexus_user_roles") || "{}");
+            overrides[next.id] = "super_admin";
+            if (next.email) overrides[next.email] = "super_admin";
+            localStorage.setItem("nexus_user_roles", JSON.stringify(overrides));
+            window.dispatchEvent(new Event("nexus-auth-update"));
+          }
+          return { data: { ok: true }, error: null };
+        }
+
+        return { data: null, error: null };
+      };
     }
 
     return Reflect.get(_supabase || {}, prop, receiver);

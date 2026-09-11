@@ -12,17 +12,20 @@ import {
   Users,
   Settings,
   Ticket,
+  Inbox,
   BarChart3,
   Crown,
   Shield,
   ArrowRight,
+  Eye,
 } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { QuickActionCard } from "@/components/dashboard/QuickActionCard";
 import { WorkspaceBanner } from "@/components/dashboard/WorkspaceBanner";
 import { DashboardPageHeader, SectionCard } from "@/components/site/PageLayout";
-import { getMockAnalytics, MOCK_ORDERS } from "@/lib/mock-data";
+import { getMockAnalytics } from "@/lib/mock-data";
 import { fetchOrders } from "@/api/orders";
+import { fetchTrafficStats } from "@/api/traffic";
 import { DASHBOARD_THEME } from "@/lib/dashboard-theme";
 import { Button } from "@/components/ui/button";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
@@ -66,16 +69,20 @@ function Dashboard() {
     };
   }, [queryClient]);
 
+  const { data: traffic } = useQuery({
+    queryKey: ["admin-traffic"],
+    queryFn: () => fetchTrafficStats(),
+    staleTime: 30_000,
+    retry: 1,
+  });
+
   const { data: stats } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: async () => {
       // First, get all orders including local fallback
-      let allOrders = MOCK_ORDERS;
+      let allOrders: Awaited<ReturnType<typeof fetchOrders>> = [];
       try {
-        const list = await fetchOrders();
-        if (list && list.length) {
-          allOrders = list;
-        }
+        allOrders = await fetchOrders();
       } catch (err) {
         console.warn("Error loading orders for admin dashboard:", err);
       }
@@ -150,10 +157,24 @@ function Dashboard() {
 
       <DashboardPageHeader
         title="Overview"
-        description="Real-time snapshot of catalog health, revenue, and fulfillment queue."
+        description="Catalog, revenue, fulfillment, and how many people visited the storefront."
       />
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+        <StatCard
+          label="Visitors today"
+          value={traffic?.today.uniques ?? 0}
+          icon={Eye}
+          accentClass="bg-[#FF7A00]/10 text-[#FF7A00]"
+          hint={`${traffic?.today.pageviews ?? 0} page views today`}
+        />
+        <StatCard
+          label="All-time visitors"
+          value={traffic?.allTime.uniques ?? 0}
+          icon={Users}
+          accentClass={`bg-primary/10 ${theme.kpiIcon}`}
+          hint="Unique browsers on the shop"
+        />
         <StatCard
           label="Active SKUs"
           value={stats?.products ?? 0}
@@ -207,6 +228,12 @@ function Dashboard() {
             icon={ShoppingBag}
           />
           <QuickActionCard
+            to="/admin/inbox"
+            label="Inbox"
+            description="info@smartzone.pk & contact queries"
+            icon={Inbox}
+          />
+          <QuickActionCard
             to="/admin/vouchers"
             label="Vouchers"
             description="Promo codes & discounts"
@@ -215,7 +242,7 @@ function Dashboard() {
           <QuickActionCard
             to="/admin/analytics"
             label="Analytics"
-            description="Revenue & category trends"
+            description="Visitors, revenue & category trends"
             icon={BarChart3}
           />
           <QuickActionCard

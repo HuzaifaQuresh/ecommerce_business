@@ -42,7 +42,7 @@ function VendorOrderDetail() {
           vendorProductIds = new Set(fallbackProducts.map((p) => p.id));
         }
 
-        order.items = order.items.filter((item) => vendorProductIds.has(item.product_id!));
+        order.items = (order.items ?? []).filter((item) => vendorProductIds.has(item.product_id!));
       }
       return order;
     },
@@ -65,7 +65,7 @@ function VendorOrderDetail() {
     return <div className="h-40 rounded-xl border bg-muted/30 animate-pulse" />;
   }
 
-  if (isError || !data || data.items.length === 0) {
+  if (isError || !data || !(data.items ?? []).length) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">Order not found or no items belong to you.</p>

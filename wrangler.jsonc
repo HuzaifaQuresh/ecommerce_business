@@ -10,5 +10,22 @@
   ],
   "observability": {
     "enabled": true
+  },
+  "cache": {
+    "enabled": false
+  },
+  "kv_namespaces": [
+    {
+      "binding": "INBOX",
+      "id": "b90e185fa3ae45f9999c863a2aaeae6f"
+    }
+  ],
+  "send_email": [
+    {
+      "name": "EMAIL"
+    }
+  ],
+  "vars": {
+    "SUPABASE_URL": "https://sperknmkbyrbmebipnfq.supabase.co"
   }
 }

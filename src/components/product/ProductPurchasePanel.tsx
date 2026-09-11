@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { fmtPKR, AVAILABILITY_LABEL } from "@/lib/format";
 import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,7 @@ type Props = {
 
 export function ProductPurchasePanel({ product, activeVoucher }: Props) {
   const { add } = useCart();
+  const { user } = useAuth();
   const { isWishlisted, toggleWishlist, setDrawerOpen: openWishlistDrawer } = useWishlist();
   const navigate = useNavigate();
   const [qty, setQty] = useState(1);
@@ -84,7 +86,11 @@ export function ProductPurchasePanel({ product, activeVoucher }: Props) {
       toast.error("Item not available");
       return;
     }
-    add(cartPayload, qty);
+    add(cartPayload, qty, { openDrawer: false });
+    if (!user) {
+      navigate({ to: "/auth", search: { redirect: "/checkout", tab: "signin" } });
+      return;
+    }
     navigate({ to: "/checkout" });
   };
 
@@ -254,7 +260,6 @@ export function ProductPurchasePanel({ product, activeVoucher }: Props) {
             disabled={!inStock}
             onClick={() => {
               add(cartPayload, qty);
-              toast.success(`Added ${qty} × ${product.title}`);
             }}
             className="flex-1 h-12 py-3.5 border-2 border-[#0052B4] text-[#0052B4] bg-white hover:bg-blue-50 font-bold rounded-xl text-sm sm:text-base transition inline-flex items-center justify-center gap-2"
           >

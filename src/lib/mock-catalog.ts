@@ -4,7 +4,7 @@ import {
   saveServerProductFn,
   deleteServerProductFn,
 } from "@/api/server-products";
-import { TUYA_PRODUCTS } from "@/lib/tuya-catalog-data";
+import { CATALOG_STORAGE_VERSION } from "@/lib/catalog-version";
 
 /** Base maker & industrial automation catalog */
 const IMG = "https://images.unsplash.com/photo-1518770660439-4636190af475?w=600";
@@ -180,65 +180,140 @@ const BASE_HARDWARE_PRODUCTS: ProductRow[] = [
   },
 ];
 
-export const STATIC_MOCK_PRODUCTS: ProductRow[] = [...TUYA_PRODUCTS, ...BASE_HARDWARE_PRODUCTS];
+let tuyaCatalogLoaded = false;
+let tuyaCatalogLoading: Promise<void> | null = null;
+const builtinCatalog: ProductRow[] = [...BASE_HARDWARE_PRODUCTS];
 
-export const MOCK_PRODUCTS: ProductRow[] = [...STATIC_MOCK_PRODUCTS];
+export const STATIC_MOCK_PRODUCTS: ProductRow[] = builtinCatalog;
+export const MOCK_PRODUCTS: ProductRow[] = [...builtinCatalog];
 
 const isBrowser = typeof window !== "undefined";
-const CATALOG_STORAGE_VERSION = "smartzone_v4_standardized_titles";
+const productById = new Map<string, ProductRow>();
+const productBySlug = new Map<string, ProductRow>();
+
+function isUserProduct(product: ProductRow) {
+  return Boolean(product.id?.startsWith("user-"));
+}
+
+/** Demo seed SKUs and leftover test rows must never reach the public storefront. */
+export function isDemoOrTestProduct(product: ProductRow) {
+  const id = (product.id || "").toLowerCase();
+  if (id.startsWith("mock-") || id.startsWith("test-") || id.startsWith("demo-")) return true;
+  if (product.vendor_id === "demo-vendor") return true;
+  const tags = (product.tags ?? []).map((tag) => String(tag).toLowerCase());
+  return tags.includes("demo") || tags.includes("test") || tags.includes("placeholder");
+}
+
+function rebuildLookupIndexes() {
+  productById.clear();
+  productBySlug.clear();
+  for (const product of MOCK_PRODUCTS) {
+    if (product.id) {
+      productById.set(product.id, product);
+      productById.set(product.id.toLowerCase(), product);
+    }
+    const slug = (product.slug || "").toLowerCase().trim();
+    if (slug) productBySlug.set(slug, product);
+  }
+}
+
+function purgeStaleCatalogStorage() {
+  if (!isBrowser) return;
+  try {
+    if (localStorage.getItem("smartzone_catalog_version") === CATALOG_STORAGE_VERSION) return;
+    localStorage.removeItem("nexus_local_products");
+    localStorage.setItem("smartzone_catalog_version", CATALOG_STORAGE_VERSION);
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+function readUserProducts(): ProductRow[] {
+  if (!isBrowser) return [];
+  purgeStaleCatalogStorage();
+  const val = localStorage.getItem("nexus_local_products");
+  if (!val) return [];
+  try {
+    const parsed = JSON.parse(val);
+    return Array.isArray(parsed)
+      ? parsed.filter((product: ProductRow) => isUserProduct(product) && !isDemoOrTestProduct(product))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistableProducts() {
+  return MOCK_PRODUCTS.filter((product) => isUserProduct(product) && !isDemoOrTestProduct(product));
+}
+
+function persistUserProducts() {
+  if (!isBrowser) return;
+  try {
+    localStorage.setItem("nexus_local_products", JSON.stringify(persistableProducts()));
+    localStorage.setItem("smartzone_catalog_version", CATALOG_STORAGE_VERSION);
+  } catch (e) {
+    console.warn("Catalog localStorage skipped:", e);
+  }
+}
+
+function rebuildCatalog(userProducts: ProductRow[] = readUserProducts()) {
+  MOCK_PRODUCTS.length = 0;
+  MOCK_PRODUCTS.push(...userProducts, ...builtinCatalog);
+  rebuildLookupIndexes();
+}
+
+rebuildLookupIndexes();
+
+export async function ensureTuyaCatalogLoaded() {
+  if (tuyaCatalogLoaded) return;
+  if (tuyaCatalogLoading) {
+    await tuyaCatalogLoading;
+    return;
+  }
+  tuyaCatalogLoading = (async () => {
+    const { TUYA_PRODUCTS } = await import("@/lib/tuya-catalog-data");
+    const seen = new Set(builtinCatalog.map((p) => p.id));
+    for (const product of TUYA_PRODUCTS) {
+      if (!seen.has(product.id)) {
+        builtinCatalog.push(product);
+        seen.add(product.id);
+      }
+    }
+    tuyaCatalogLoaded = true;
+    rebuildCatalog();
+    persistUserProducts();
+  })();
+  await tuyaCatalogLoading;
+}
 
 let isLoadedFromLocalStorage = false;
 export function initializeMockProductsOnClient(force = false) {
   if (!isBrowser) return;
   if (isLoadedFromLocalStorage && !force) return;
   try {
-    const currentVersion = localStorage.getItem("smartzone_catalog_version");
-    if (currentVersion !== CATALOG_STORAGE_VERSION || force) {
-      // Migrate / refresh to complete official catalogue while preserving user-created items
-      const val = localStorage.getItem("nexus_local_products");
-      let customUserProducts: ProductRow[] = [];
-      if (val) {
-        try {
-          const parsed = JSON.parse(val);
-          if (Array.isArray(parsed)) {
-            customUserProducts = parsed.filter(
-              (p: ProductRow) =>
-                p.id?.startsWith("user-") || (p.vendor_id && p.vendor_id !== "demo-vendor"),
-            );
-          }
-        } catch {}
-      }
-      const combined = [...customUserProducts, ...STATIC_MOCK_PRODUCTS];
-      MOCK_PRODUCTS.length = 0;
-      MOCK_PRODUCTS.push(...combined);
-      localStorage.setItem("nexus_local_products", JSON.stringify(combined));
-      localStorage.setItem("smartzone_catalog_version", CATALOG_STORAGE_VERSION);
-      isLoadedFromLocalStorage = true;
-      return;
-    }
-
-    const val = localStorage.getItem("nexus_local_products");
-    if (val) {
-      const parsed = JSON.parse(val);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        MOCK_PRODUCTS.length = 0;
-        MOCK_PRODUCTS.push(...parsed);
-      }
-    } else {
-      localStorage.setItem("nexus_local_products", JSON.stringify(STATIC_MOCK_PRODUCTS));
-    }
+    rebuildCatalog(readUserProducts());
+    persistUserProducts();
     isLoadedFromLocalStorage = true;
   } catch (e) {
     console.error("Failed to load local products:", e);
+    rebuildCatalog([]);
+    isLoadedFromLocalStorage = true;
   }
 }
 
 export async function syncServerProducts() {
   initializeMockProductsOnClient();
   try {
-    const serverProducts = await getServerProductsFn();
+    const serverProducts = await Promise.race([
+      getServerProductsFn(),
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Server products timeout")), 600);
+      }),
+    ]);
     if (Array.isArray(serverProducts) && serverProducts.length > 0) {
       for (const sp of serverProducts) {
+        if (isDemoOrTestProduct(sp)) continue;
         const idx = MOCK_PRODUCTS.findIndex(
           (p) => p.id === sp.id || (sp.slug && p.slug === sp.slug),
         );
@@ -248,13 +323,8 @@ export async function syncServerProducts() {
           MOCK_PRODUCTS.unshift(sp);
         }
       }
-      if (isBrowser) {
-        try {
-          localStorage.setItem("nexus_local_products", JSON.stringify(MOCK_PRODUCTS));
-        } catch {
-          // ignore
-        }
-      }
+      rebuildLookupIndexes();
+      persistUserProducts();
     }
   } catch (e) {
     console.warn("Could not sync server products:", e);
@@ -264,7 +334,7 @@ export async function syncServerProducts() {
 
 export function saveLocalProduct(product: ProductRow) {
   initializeMockProductsOnClient();
-  const targetId = product.id || `mock-${Date.now()}`;
+  const targetId = product.id || `user-${Date.now()}`;
   const normalizedProduct = { ...product, id: targetId };
 
   const index = MOCK_PRODUCTS.findIndex(
@@ -275,13 +345,8 @@ export function saveLocalProduct(product: ProductRow) {
   } else {
     MOCK_PRODUCTS.unshift(normalizedProduct);
   }
-  if (isBrowser) {
-    try {
-      localStorage.setItem("nexus_local_products", JSON.stringify(MOCK_PRODUCTS));
-    } catch (e) {
-      console.error("Failed to save local product:", e);
-    }
-  }
+  rebuildLookupIndexes();
+  persistUserProducts();
 
   // Persist to server so other devices receive this product immediately
   saveServerProductFn({ data: normalizedProduct as any }).catch((err) => {
@@ -296,13 +361,8 @@ export function deleteLocalProduct(id: string) {
   const index = MOCK_PRODUCTS.findIndex((p) => p.id === id || p.slug === id);
   if (index >= 0) {
     MOCK_PRODUCTS.splice(index, 1);
-    if (isBrowser) {
-      try {
-        localStorage.setItem("nexus_local_products", JSON.stringify(MOCK_PRODUCTS));
-      } catch (e) {
-        console.error("Failed to delete local product:", e);
-      }
-    }
+    rebuildLookupIndexes();
+    persistUserProducts();
   }
 
   // Delete from server so other devices reflect deletion
@@ -313,8 +373,7 @@ export function deleteLocalProduct(id: string) {
 
 export function getMockProductBySlug(slug: string) {
   initializeMockProductsOnClient();
-  if (!MOCK_PRODUCTS.length) return null;
-  if (!slug) return MOCK_PRODUCTS[0];
+  if (!slug || !MOCK_PRODUCTS.length) return null;
 
   let decoded = slug;
   try {
@@ -325,32 +384,14 @@ export function getMockProductBySlug(slug: string) {
 
   const cleanSlug = decoded.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-  let match = MOCK_PRODUCTS.find((p) => {
-    const pSlug = (p.slug || "").toLowerCase();
-    const pId = (p.id || "").toLowerCase();
-    return (
-      pSlug === decoded ||
-      pId === decoded ||
-      pSlug === cleanSlug ||
-      p.slug === slug ||
-      p.id === slug
-    );
-  });
-
-  if (!match) {
-    match = MOCK_PRODUCTS.find((p) => {
-      const pSlug = (p.slug || "").toLowerCase();
-      const pTitle = (p.title || "").toLowerCase();
-      const pId = (p.id || "").toLowerCase();
-      return (
-        (pSlug && (pSlug.includes(decoded) || decoded.includes(pSlug))) ||
-        (pTitle && (pTitle.includes(decoded) || decoded.includes(pTitle))) ||
-        (pId && (pId.includes(decoded) || decoded.includes(pId)))
-      );
-    });
-  }
-
-  return match ?? MOCK_PRODUCTS[0];
+  return (
+    productBySlug.get(decoded) ||
+    productById.get(decoded) ||
+    productBySlug.get(cleanSlug) ||
+    productById.get(slug) ||
+    productBySlug.get(slug.toLowerCase()) ||
+    null
+  );
 }
 
 export const MOCK_PRODUCT_COUNT = MOCK_PRODUCTS.length;

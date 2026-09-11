@@ -1,12 +1,13 @@
 /** Responsive, compressed image URLs for product UI (Unsplash + Supabase-friendly). */
 
-export type ProductImageSize = "thumb" | "card" | "detail" | "hero";
+export type ProductImageSize = "thumb" | "card" | "detail" | "hero" | "banner";
 
-const SIZE: Record<ProductImageSize, { w: number; q: number }> = {
-  thumb: { w: 96, q: 68 },
-  card: { w: 360, q: 70 },
-  detail: { w: 720, q: 75 },
-  hero: { w: 1000, q: 75 },
+const SIZE: Record<ProductImageSize, { w: number; q: number; fit: "crop" | "max" }> = {
+  thumb: { w: 96, q: 68, fit: "crop" },
+  card: { w: 360, q: 70, fit: "crop" },
+  detail: { w: 720, q: 75, fit: "crop" },
+  hero: { w: 1600, q: 82, fit: "max" },
+  banner: { w: 1600, q: 82, fit: "max" },
 };
 
 export const PRODUCT_IMAGE_PLACEHOLDER = "/placeholder-product.svg";
@@ -19,16 +20,18 @@ export function optimizeProductImageUrl(
   const url = src.trim();
   if (url.startsWith("/") || url.startsWith("data:")) return url;
 
-  const { w, q } = SIZE[size];
+  const { w, q, fit } = SIZE[size];
 
   if (url.includes("images.unsplash.com")) {
     const base = url.split("?")[0];
-    return `${base}?w=${w}&q=${q}&auto=format&fm=webp&fit=crop`;
+    // Re-encode via Unsplash CDN — strips EXIF/metadata and serves sized WebP
+    return `${base}?w=${w}&h=${Math.round(w * 0.75)}&q=${q}&auto=format&fm=webp&fit=${fit}`;
   }
 
   if (url.includes("supabase.co/storage/v1/object/public")) {
     const sep = url.includes("?") ? "&" : "?";
-    return `${url}${sep}width=${w}&quality=${q}`;
+    // Supabase image transform — resize + quality (reduces payload / metadata weight)
+    return `${url}${sep}width=${w}&height=${Math.round(w * 0.75)}&resize=contain&quality=${q}`;
   }
 
   return url;

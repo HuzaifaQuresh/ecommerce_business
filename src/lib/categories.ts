@@ -136,6 +136,18 @@ export const CATEGORY_CATALOG: CategoryNode[] = [
   },
 ];
 
+/** Shopper-facing labels that map onto a real `products.category` value. */
+export const CATEGORY_ALIASES: Record<string, string> = {
+  "Timer Switches": "Smart Switches",
+  "Curtain/Gate Motors": "Smart Curtain Systems",
+  "Smart Control Panel": "Smart Control Panels",
+  "Wireless CCTV": "Smart Security Cameras",
+  "Security Cameras": "Smart Security Cameras",
+  "Voltage Protectors": "Electrical Parts",
+  "Smart Wall Switches": "Smart Switches",
+  "Lights & Sensors": "Tuya Sensors",
+};
+
 /** Legacy DB category values → parent department for filtering */
 export const LEGACY_CATEGORY_PARENT: Record<string, string> = {
   "3D Printer": "Accessories",
@@ -149,6 +161,8 @@ export const LEGACY_CATEGORY_PARENT: Record<string, string> = {
   "Smart Control Panel": "IoT Solutions",
   "Smart Switches": "IoT Solutions",
   "Smart Switch": "IoT Solutions",
+  "Timer Switches": "IoT Solutions",
+  "Curtain/Gate Motors": "IoT Solutions",
   "Smart Sockets & Plugs": "IoT Solutions",
   "Smart Socket": "IoT Solutions",
   "Smart Plugs": "IoT Solutions",
@@ -159,6 +173,8 @@ export const LEGACY_CATEGORY_PARENT: Record<string, string> = {
   "Smart Circuit Breakers": "IoT Solutions",
   "Circuit Breaker": "IoT Solutions",
   "Smart Security Cameras": "Camera Solutions",
+  "Security Cameras": "Camera Solutions",
+  "Wireless CCTV": "Camera Solutions",
   "Smart Cameras": "Camera Solutions",
   "Smart Video Doorbells": "Camera Solutions",
   "Smart Video Doorbell": "Camera Solutions",
@@ -217,6 +233,10 @@ for (const [legacy, parent] of Object.entries(LEGACY_CATEGORY_PARENT)) {
   parentByLabel.set(legacy, parent);
 }
 
+for (const [alias, resolved] of Object.entries(CATEGORY_ALIASES)) {
+  parentByLabel.set(alias, parentByLabel.get(resolved) ?? resolved);
+}
+
 export function getParentCategory(label: string): string {
   return parentByLabel.get(label) ?? label;
 }
@@ -225,17 +245,24 @@ export function isTopLevelCategory(label: string): boolean {
   return TOP_LEVEL_CATEGORIES.includes(label);
 }
 
+export function resolveCategoryFilter(filter: string): string {
+  return CATEGORY_ALIASES[filter] ?? filter;
+}
+
 /** All DB `category` values that match a shop filter (parent or leaf). */
 export function getCategoryFilterValues(filter: string): string[] {
-  const node = CATEGORY_CATALOG.find((c) => c.name === filter);
+  const resolved = resolveCategoryFilter(filter);
+  const node = CATEGORY_CATALOG.find((c) => c.name === resolved);
   if (node) {
-    const values = new Set<string>([filter, ...(node.children ?? [])]);
+    const values = new Set<string>([resolved, filter, ...(node.children ?? [])]);
     for (const [legacy, parent] of Object.entries(LEGACY_CATEGORY_PARENT)) {
-      if (parent === filter) values.add(legacy);
+      if (parent === resolved || parent === filter) values.add(legacy);
     }
     return [...values];
   }
-  return [filter];
+  const values = new Set<string>([resolved]);
+  if (resolved !== filter) values.add(filter);
+  return [...values];
 }
 
 export function productMatchesCategory(productCat: string, filter: string): boolean {

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { fmtPKR } from "@/lib/format";
 import { formatDeliveryDate } from "@/lib/order-fulfillment";
 import type { OrderWithItems } from "@/types/commerce";
+import { OrderPrintReceipt } from "@/components/orders/OrderPrintReceipt";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
 import { ShippingAddressCard } from "@/components/orders/ShippingAddressCard";
@@ -32,6 +33,8 @@ export function OrderDetailView({
   const { add } = useCart();
   const navigate = useNavigate();
 
+  const items = order.items ?? [];
+
   const handleCopyId = () => {
     navigator.clipboard.writeText(order.id);
     setCopied(true);
@@ -45,16 +48,19 @@ export function OrderDetailView({
 
   const handleReorder = () => {
     let reorderedCount = 0;
-    for (const item of order.items) {
+    for (const item of items) {
       if (item.product_id) {
-        add({
-          id: item.product_id,
-          title: item.title,
-          price_pkr: Number(item.price_pkr),
-          image_url: item.image_url ?? undefined,
-          slug: item.product_slug ?? "iot-product",
-          quantity: item.quantity,
-        });
+        add(
+          {
+            id: item.product_id,
+            title: item.title,
+            price_pkr: Number(item.price_pkr),
+            image_url: item.image_url ?? null,
+            slug: item.product_slug ?? "iot-product",
+          },
+          item.quantity,
+          { openDrawer: false },
+        );
         reorderedCount += item.quantity;
       }
     }
@@ -68,7 +74,9 @@ export function OrderDetailView({
   };
 
   return (
-    <div className="space-y-6">
+    <>
+      <OrderPrintReceipt order={order} />
+      <div className="space-y-6 print:hidden">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <Link
@@ -105,7 +113,7 @@ export function OrderDetailView({
         <div className="flex items-center gap-2 self-start">
           <OrderStatusBadge status={order.status} />
           <Button variant="outline" size="sm" onClick={handlePrint} className="gap-1.5 text-xs">
-            <Printer className="h-3.5 w-3.5" /> Print
+            <Printer className="h-3.5 w-3.5" /> Print receipt
           </Button>
           <Button variant="default" size="sm" onClick={handleReorder} className="gap-1.5 text-xs">
             <RotateCcw className="h-3.5 w-3.5" /> Reorder
@@ -190,9 +198,9 @@ export function OrderDetailView({
 
       <ShippingAddressCard order={order} />
 
-      <SectionCard title={`Ordered Products (${order.items.length})`}>
+      <SectionCard title={`Ordered Products (${items.length})`}>
         <OrderLineItems
-          items={order.items}
+          items={items}
           showAdminControls={showAdminControls}
           onStatusChange={onItemStatusChange}
         />
@@ -200,5 +208,6 @@ export function OrderDetailView({
 
       {adminSlot}
     </div>
+    </>
   );
 }

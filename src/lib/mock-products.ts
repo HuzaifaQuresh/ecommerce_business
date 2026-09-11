@@ -7,4 +7,6 @@ export {
   deleteLocalProduct,
   initializeMockProductsOnClient,
   syncServerProducts,
+  ensureTuyaCatalogLoaded,
+  isDemoOrTestProduct,
 } from "@/lib/mock-catalog";

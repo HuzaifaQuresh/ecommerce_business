@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchRelatedProducts } from "@/api/products";
+import { catalogRelatedKey } from "@/lib/catalog-version";
 import { ProductCard, type Product } from "./ProductCard";
 
 export function RelatedProducts({
@@ -17,7 +18,7 @@ export function RelatedProducts({
   const safeExcludeId = excludeId || "";
 
   const { data: fetched, isLoading } = useQuery({
-    queryKey: ["related", safeCategory, safeExcludeId],
+    queryKey: catalogRelatedKey(safeCategory, safeExcludeId),
     queryFn: () => fetchRelatedProducts(safeCategory, safeExcludeId),
     enabled: products === undefined && !!safeCategory,
   });

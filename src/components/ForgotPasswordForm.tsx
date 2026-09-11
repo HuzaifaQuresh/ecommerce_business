@@ -1,11 +1,13 @@
 import React, { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, KeyRound, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { persistPendingVerification } from "@/lib/verify-email";
+import { getPasswordResetRedirectTo } from "@/lib/password-recovery";
 
 interface ForgotPasswordFormProps {
   onBack?: () => void;
@@ -30,8 +32,9 @@ export function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
 
     setBusy(true);
     try {
+      persistPendingVerification(email.trim().toLowerCase(), "recovery");
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-        redirectTo: `${window.location.origin}/auth/update-password`,
+        redirectTo: getPasswordResetRedirectTo(),
       });
 
       setBusy(false);
@@ -41,8 +44,13 @@ export function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
         return;
       }
 
-      setSubmitted(true);
-      toast.success("Password reset instructions sent to your email");
+      if (!isSupabaseConfigured()) {
+        window.location.href = "/auth/reset-password";
+        return;
+      }
+
+      toast.success("Check your email to verify this reset request.");
+      window.location.href = `/auth/verify-email?tab=signin&purpose=recovery&email=${encodeURIComponent(email.trim().toLowerCase())}`;
     } catch (err: any) {
       setBusy(false);
       toast.error(err?.message || "An unexpected error occurred");

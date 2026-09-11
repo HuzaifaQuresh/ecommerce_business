@@ -73,7 +73,7 @@ function VendorSettings() {
         <EmptyState
           icon={Store}
           title="Vendor shop not linked"
-          description="Ask a super admin to assign you the vendor role in Admin → Users & Roles. A shop record is created automatically."
+          description="Ask Super Admin to add you from Admin → Users & Roles → Vendors, or register at Seller Center (/vendor/auth)."
         />
       </div>
     );

@@ -396,6 +396,51 @@ export type Database = {
         };
         Relationships: [];
       };
+      vendor_applications: {
+        Row: {
+          admin_notes: string | null;
+          business_email: string;
+          cnic_or_tax_id: string;
+          created_at: string;
+          description: string | null;
+          id: string;
+          phone: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          shop_name: string;
+          status: "pending" | "approved" | "rejected";
+          user_id: string;
+        };
+        Insert: {
+          admin_notes?: string | null;
+          business_email: string;
+          cnic_or_tax_id: string;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          phone: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          shop_name: string;
+          status?: "pending" | "approved" | "rejected";
+          user_id: string;
+        };
+        Update: {
+          admin_notes?: string | null;
+          business_email?: string;
+          cnic_or_tax_id?: string;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          phone?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          shop_name?: string;
+          status?: "pending" | "approved" | "rejected";
+          user_id?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -404,6 +449,70 @@ export type Database = {
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"];
+          _user_id: string;
+        };
+        Returns: boolean;
+      };
+      staff_list_users: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          user_id: string;
+          email: string | null;
+          full_name: string | null;
+          phone: string | null;
+          role: Database["public"]["Enums"]["app_role"];
+          created_at: string;
+          is_disabled: boolean;
+        }[];
+      };
+      admin_remove_user: {
+        Args: {
+          _target_user_id: string;
+          _mode: string;
+        };
+        Returns: Json;
+      };
+      admin_assign_role: {
+        Args: {
+          _target_user_id: string;
+          _new_role: Database["public"]["Enums"]["app_role"];
+        };
+        Returns: Json;
+      };
+      staff_assign_role_by_email: {
+        Args: {
+          _email: string;
+          _new_role: Database["public"]["Enums"]["app_role"];
+        };
+        Returns: Json;
+      };
+      admin_provision_vendor: {
+        Args: {
+          _email: string;
+          _shop_name: string;
+          _phone?: string | null;
+          _cnic?: string | null;
+          _description?: string | null;
+          _commission_pct?: number;
+        };
+        Returns: Json;
+      };
+      admin_review_vendor_application: {
+        Args: {
+          _app_id: string;
+          _approve: boolean;
+          _notes?: string | null;
+        };
+        Returns: Json;
+      };
+      hold_unverified_email_signup: {
+        Args: {
+          _email: string;
+        };
+        Returns: Json;
+      };
+      is_platform_staff: {
+        Args: {
           _user_id: string;
         };
         Returns: boolean;
