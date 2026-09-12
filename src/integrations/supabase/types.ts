@@ -91,6 +91,7 @@ export type Database = {
           admin_notes: string | null;
           user_id: string | null;
           voucher_code: string | null;
+          stock_adjusted: boolean;
         };
         Insert: {
           address: string;
@@ -117,6 +118,7 @@ export type Database = {
           admin_notes?: string | null;
           user_id?: string | null;
           voucher_code?: string | null;
+          stock_adjusted?: boolean;
         };
         Update: {
           address?: string;
@@ -143,6 +145,25 @@ export type Database = {
           admin_notes?: string | null;
           user_id?: string | null;
           voucher_code?: string | null;
+          stock_adjusted?: boolean;
+        };
+        Relationships: [];
+      };
+      product_inventory: {
+        Row: {
+          slug: string;
+          stock: number;
+          updated_at: string;
+        };
+        Insert: {
+          slug: string;
+          stock?: number;
+          updated_at?: string;
+        };
+        Update: {
+          slug?: string;
+          stock?: number;
+          updated_at?: string;
         };
         Relationships: [];
       };
@@ -516,6 +537,32 @@ export type Database = {
           _user_id: string;
         };
         Returns: boolean;
+      };
+      ensure_inventory_row: {
+        Args: {
+          p_slug: string;
+          p_stock?: number;
+        };
+        Returns: undefined;
+      };
+      upsert_inventory: {
+        Args: {
+          p_slug: string;
+          p_stock: number;
+        };
+        Returns: undefined;
+      };
+      decrement_inventory: {
+        Args: {
+          p_items: Json;
+        };
+        Returns: undefined;
+      };
+      restore_inventory: {
+        Args: {
+          p_items: Json;
+        };
+        Returns: undefined;
       };
     };
     Enums: {

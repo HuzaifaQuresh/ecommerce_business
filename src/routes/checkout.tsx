@@ -6,6 +6,8 @@ import { useCart } from "@/contexts/CartContext";
 import { fmtPKR } from "@/lib/format";
 import { placeOrder } from "@/api/orders";
 import { validateVoucher } from "@/api/vouchers";
+import { fetchInventoryMap } from "@/lib/inventory";
+import { getMockProductBySlug } from "@/lib/mock-products";
 import { useCheckoutConfig } from "@/hooks/useSiteSettings";
 import { computeCheckoutTotals, getPaymentFee } from "@/lib/checkout-totals";
 import { Button } from "@/components/ui/button";
@@ -64,7 +66,7 @@ const schema = z.object({
 });
 
 function Checkout() {
-  const { items, subtotal, clear } = useCart();
+  const { items, subtotal, clear, setQty } = useCart();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -330,6 +332,37 @@ function Checkout() {
         navigate({ to: "/auth", search: { redirect: "/checkout", tab: "signin" } });
         return;
       }
+
+      // First-come stock check — refresh live inventory before placing
+      const slugs = items.map((i) => i.slug).filter(Boolean);
+      const liveStock = await fetchInventoryMap(slugs);
+      const adjusted: typeof items = [];
+      for (const item of items) {
+        const product = getMockProductBySlug(item.slug);
+        const availability = product?.availability || "in_stock";
+        if (availability !== "in_stock") {
+          adjusted.push(item);
+          continue;
+        }
+        const available = liveStock.has(item.slug)
+          ? liveStock.get(item.slug)!
+          : typeof item.maxStock === "number"
+            ? item.maxStock
+            : Number(product?.stock) || 0;
+        if (available < 1) {
+          toast.error(`“${item.title}” is out of stock. Remove it to continue.`);
+          setSubmitting(false);
+          return;
+        }
+        if (item.quantity > available) {
+          setQty(item.id, available);
+          toast.error(`“${item.title}” — only ${available} left. Quantity updated; review and submit again.`);
+          setSubmitting(false);
+          return;
+        }
+        adjusted.push({ ...item, maxStock: available });
+      }
+
       const order = await placeOrder({
         ...parsed.data,
         subtotal_pkr: totals.subtotal,
@@ -345,7 +378,7 @@ function Checkout() {
         province: parsed.data.province,
         postal_code: parsed.data.postal_code || undefined,
         landmark: parsed.data.landmark || undefined,
-        items: items.map((i) => ({
+        items: adjusted.map((i) => ({
           product_id: i.id,
           title: i.title,
           price_pkr: i.price_pkr,
@@ -354,7 +387,7 @@ function Checkout() {
           product_slug: i.slug,
         })),
       });
-      const lineSnapshot = items.map((i) => ({
+      const lineSnapshot = adjusted.map((i) => ({
         title: i.title,
         quantity: i.quantity,
         price_pkr: i.price_pkr,
@@ -363,6 +396,7 @@ function Checkout() {
       clear();
       qc.invalidateQueries({ queryKey: ["admin-orders"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
 
       if (paymentMethod === "card") {
         setPendingOrder({

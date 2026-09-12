@@ -11,6 +11,7 @@ import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { applyHttpCachePolicy } from "./lib/http-cache";
 import { canonicalRedirect } from "./lib/canonical";
+import { legacySeoRedirect } from "./lib/legacy-seo";
 import { serveSitemap, tryServeSeoDocument } from "./lib/seo-documents";
 
 type ServerEntry = { fetch: RequestHandler<Register> };
@@ -76,6 +77,9 @@ export default createServerEntry({
     try {
       const redirect = canonicalRedirect(request);
       if (redirect) return applyHttpCachePolicy(request, redirect);
+
+      const legacy = legacySeoRedirect(request);
+      if (legacy) return applyHttpCachePolicy(request, legacy);
 
       const seoSync = tryServeSeoDocument(request);
       if (seoSync) return applyHttpCachePolicy(request, seoSync);

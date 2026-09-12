@@ -1,6 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { MOCK_DELIVERY_METHODS, MOCK_PAYMENT_METHODS, MOCK_SITE_SETTINGS } from "@/lib/mock-data";
 import { DEFAULT_CHECKOUT_CONFIG, parseJsonSetting } from "@/lib/checkout-totals";
+import { sanitizeSiteSettings } from "@/lib/sanitize-settings";
+import { materializeDataUrisInValue } from "@/lib/upload-image";
 import type { CheckoutConfig, DeliveryMethod, PaymentMethod } from "@/types/commerce";
 
 function numSetting(value: unknown, fallback: number): number {
@@ -9,7 +11,7 @@ function numSetting(value: unknown, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function withTimeout<T>(promise: Promise<T>, ms = 800): Promise<T> {
+function withTimeout<T>(promise: PromiseLike<T>, ms = 12000): Promise<T> {
   let timeoutId: any;
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
@@ -34,12 +36,12 @@ export async function fetchSiteSettings() {
     if (data?.length) {
       const map: Record<string, unknown> = {};
       for (const row of data) map[row.key] = row.value;
-      return map;
+      return sanitizeSiteSettings(map);
     }
   } catch {
     /* demo */
   }
-  return { ...MOCK_SITE_SETTINGS };
+  return sanitizeSiteSettings({ ...MOCK_SITE_SETTINGS });
 }
 
 export async function fetchPaymentMethods(): Promise<PaymentMethod[]> {
@@ -90,9 +92,34 @@ export async function fetchCheckoutConfig(): Promise<CheckoutConfig> {
 }
 
 export async function updateSiteSetting(key: string, value: unknown) {
+  // Convert any leftover base64/data-URI images to CDN URLs before persist.
+  let nextValue = value;
+  try {
+    nextValue = await materializeDataUrisInValue(value);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Image upload failed";
+    if (/sign in|session expired/i.test(message)) {
+      throw new Error(message);
+    }
+    if (/exp["']?\s*claim|timestamp check failed|jwt expired/i.test(message)) {
+      throw new Error("Session expired. Sign in again, then re-upload the image and save.");
+    }
+    throw new Error(`${message}. Re-upload the image via the picker, then save again.`);
+  }
+
+  const serialized = typeof nextValue === "string" ? nextValue : JSON.stringify(nextValue ?? null);
+  if (/data:image\/[a-z0-9+.-]+;base64,/i.test(serialized)) {
+    throw new Error(
+      "Image must be a CDN URL (upload via the image picker). Base64 images are not saved.",
+    );
+  }
+  if (serialized.length > 400_000) {
+    throw new Error("Setting payload is too large. Use shorter text or CDN image URLs.");
+  }
+
   const { error } = await supabase
     .from("site_settings")
-    .upsert({ key, value: value as never, updated_at: new Date().toISOString() });
+    .upsert({ key, value: nextValue as never, updated_at: new Date().toISOString() });
   if (error) throw error;
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("nexus-settings-update"));

@@ -18,6 +18,8 @@ import {
   Shield,
   ArrowRight,
   Eye,
+  ClipboardList,
+  ScrollText,
 } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { QuickActionCard } from "@/components/dashboard/QuickActionCard";
@@ -234,6 +236,12 @@ function Dashboard() {
             icon={Inbox}
           />
           <QuickActionCard
+            to="/admin/site-survey"
+            label="Site Survey"
+            description="Addresses, map pins & field mail"
+            icon={ClipboardList}
+          />
+          <QuickActionCard
             to="/admin/vouchers"
             label="Vouchers"
             description="Promo codes & discounts"
@@ -244,6 +252,12 @@ function Dashboard() {
             label="Analytics"
             description="Visitors, revenue & category trends"
             icon={BarChart3}
+          />
+          <QuickActionCard
+            to="/admin/audit"
+            label="Audit trail"
+            description="Orders, payment events & admin actions"
+            icon={ScrollText}
           />
           <QuickActionCard
             to="/admin/settings"

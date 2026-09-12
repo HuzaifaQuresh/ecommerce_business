@@ -1,5 +1,6 @@
 import { parseJsonSetting } from "@/lib/checkout-totals";
 import { parseHideText } from "@/lib/home-rotators";
+import { sanitizeImageUrl } from "@/lib/sanitize-settings";
 
 export const HOME_HERO_SLIDES_KEY = "home_hero_slides";
 
@@ -87,7 +88,7 @@ function normalizeSlide(raw: Partial<HomeHeroSlide> | null | undefined): HomeHer
   if (!raw || typeof raw !== "object") return null;
   const heading = String(raw.heading ?? "").trim();
   const title = String(raw.title ?? "").trim();
-  const image_url = String(raw.image_url ?? "").trim();
+  const image_url = sanitizeImageUrl(String(raw.image_url ?? "").trim());
   if (!heading && !title && !image_url) return null;
   return {
     badge: String(raw.badge ?? "").trim() || "SmartZone",
@@ -114,7 +115,7 @@ export function parseHeroSlides(value: unknown): HomeHeroSlide[] | null {
 export function resolveHeroSlides(settings?: Record<string, unknown> | null): HomeHeroSlide[] {
   const saved = parseHeroSlides(settings?.home_hero_slides);
   if (saved) return saved;
-  const legacyImage = unwrapSettingString(settings?.hero_banner);
+  const legacyImage = sanitizeImageUrl(unwrapSettingString(settings?.hero_banner));
   if (legacyImage) {
     const seeded = defaultHeroSlides();
     seeded[0] = { ...seeded[0], image_url: legacyImage };

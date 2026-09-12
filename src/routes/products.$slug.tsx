@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { fetchActiveVouchers } from "@/api/vouchers";
 import { fetchProductBySlug } from "@/api/products";
@@ -24,30 +24,19 @@ import type { ProductRow } from "@/types/commerce";
 
 export const Route = createFileRoute("/products/$slug")({
   loader: async ({ context: { queryClient }, params: { slug } }) => {
-    try {
-      if (!slug) return null;
-      return await queryClient.ensureQueryData({
+    if (!slug) throw notFound();
+    const product = await queryClient
+      .ensureQueryData({
         queryKey: catalogProductKey(slug),
         staleTime: 60_000,
         queryFn: () => fetchProductBySlug(slug),
-      });
-    } catch {
-      return null;
-    }
+      })
+      .catch(() => null);
+    if (!product) throw notFound();
+    return product;
   },
-  head: ({ loaderData, params }) => {
-    const product = loaderData as ProductRow | null | undefined;
-    if (!product) {
-      const slug = params.slug || "product";
-      return {
-        meta: [
-          { title: `Product | SmartZone Pakistan` },
-          { name: "description", content: "Browse smart hardware and IoT devices at SmartZone Pakistan." },
-          { name: "robots", content: "noindex,follow" },
-        ],
-        links: [canonicalLink(`/products/${slug}`)],
-      };
-    }
+  head: ({ loaderData }) => {
+    const product = loaderData as ProductRow;
     const title = productPageTitle(product.title);
     const description = productPageDescription(product);
     const url = absoluteUrl(`/products/${product.slug}`);

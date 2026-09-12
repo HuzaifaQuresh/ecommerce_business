@@ -36,11 +36,13 @@ export function tryServeSeoDocument(request: Request): Response | null {
   if (pathname === "/sitemap.xml") {
     return null; // async path — handled by serveSitemap
   }
-  if (pathname === "/apple-touch-icon.png" || pathname === "/apple-touch-icon.png/") {
+  // Prefer built static icons from /public (favicon.ico, apple-touch-icon.png).
+  // Only keep SVG fallback redirect for legacy apple-touch-icon.svg requests.
+  if (pathname === "/apple-touch-icon.svg" || pathname === "/apple-touch-icon.svg/") {
     return new Response(null, {
       status: 302,
       headers: {
-        Location: "/favicon.svg",
+        Location: "/apple-touch-icon.png",
         "Cache-Control": "public, max-age=86400",
       },
     });
@@ -67,6 +69,42 @@ export async function serveSitemap(): Promise<Response> {
     },
     {
       loc: absoluteUrl("/smart-home"),
+      lastmod: today,
+      changefreq: "weekly",
+      priority: 0.95,
+    },
+    {
+      loc: absoluteUrl("/zigbee-sensors"),
+      lastmod: today,
+      changefreq: "weekly",
+      priority: 0.95,
+    },
+    {
+      loc: absoluteUrl("/wifi-sensors"),
+      lastmod: today,
+      changefreq: "weekly",
+      priority: 0.95,
+    },
+    {
+      loc: absoluteUrl("/mqtt-sensors"),
+      lastmod: today,
+      changefreq: "weekly",
+      priority: 0.95,
+    },
+    {
+      loc: absoluteUrl("/tuya-sensors"),
+      lastmod: today,
+      changefreq: "weekly",
+      priority: 0.95,
+    },
+    {
+      loc: absoluteUrl("/iot-devices"),
+      lastmod: today,
+      changefreq: "weekly",
+      priority: 0.95,
+    },
+    {
+      loc: absoluteUrl("/automations"),
       lastmod: today,
       changefreq: "weekly",
       priority: 0.95,

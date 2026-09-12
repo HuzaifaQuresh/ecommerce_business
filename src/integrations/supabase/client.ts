@@ -377,14 +377,98 @@ function createMockQueryBuilder(initialData: any, table?: string) {
       localStorage.setItem("nexus_order_items", JSON.stringify(updatedDataset));
     } else if (table === "product_reviews") {
       localStorage.setItem("nexus_all_reviews", JSON.stringify(updatedDataset));
+    } else if (table === "audit_logs") {
+      localStorage.setItem("nexus_audit_logs", JSON.stringify(updatedDataset));
     }
+  };
+
+  type PendingMutation =
+    | { type: "update"; payload: any }
+    | { type: "delete" }
+    | { type: "insert"; payload: any }
+    | { type: "upsert"; payload: any }
+    | null;
+
+  let pendingMutation: PendingMutation = null;
+
+  const matchesFilters = (item: any) => {
+    for (const f of filters) {
+      if (!item || String(item[f.column]).toLowerCase() !== String(f.value).toLowerCase()) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const execute = async () => {
+    if (!pendingMutation) {
+      return { data: dataset, error: null };
+    }
+
+    let baseData = getMockTableData(table || "", null);
+    if (!Array.isArray(baseData)) baseData = [];
+
+    if (pendingMutation.type === "upsert") {
+      const items = Array.isArray(pendingMutation.payload)
+        ? pendingMutation.payload
+        : [pendingMutation.payload];
+      for (const item of items) {
+        if (table === "site_settings") {
+          const idx = baseData.findIndex((r: any) => r.key === item.key);
+          if (idx >= 0) baseData[idx] = { ...baseData[idx], ...item };
+          else baseData.push(item);
+        } else {
+          const idx = baseData.findIndex((r: any) => r.id && item.id && r.id === item.id);
+          if (idx >= 0) baseData[idx] = { ...baseData[idx], ...item };
+          else baseData.push({ id: "item-" + Math.random().toString(36).substring(2, 9), ...item });
+        }
+      }
+      persistDataset(baseData);
+      dataset = baseData;
+      pendingMutation = null;
+      return { data: null, error: null };
+    }
+
+    if (pendingMutation.type === "insert") {
+      const items = Array.isArray(pendingMutation.payload)
+        ? pendingMutation.payload
+        : [pendingMutation.payload];
+      const inserted = items.map((item: any) => ({
+        id: item.id || "item-" + Math.random().toString(36).substring(2, 9),
+        created_at: new Date().toISOString(),
+        ...item,
+      }));
+      baseData = [...inserted, ...baseData];
+      persistDataset(baseData);
+      dataset = inserted;
+      pendingMutation = null;
+      return { data: inserted, error: null };
+    }
+
+    if (pendingMutation.type === "update") {
+      const payload = pendingMutation.payload;
+      baseData = baseData.map((item: any) =>
+        matchesFilters(item) ? { ...item, ...payload, updated_at: new Date().toISOString() } : item,
+      );
+      persistDataset(baseData);
+      dataset = applyFilters(baseData);
+      pendingMutation = null;
+      return { data: null, error: null };
+    }
+
+    // delete
+    baseData = baseData.filter((item: any) => !matchesFilters(item));
+    persistDataset(baseData);
+    dataset = applyFilters(baseData);
+    pendingMutation = null;
+    return { data: null, error: null };
   };
 
   const builder: any = {
     select: () => builder,
     eq: (column: string, value: any) => {
       filters.push({ column, value });
-      if (Array.isArray(dataset)) {
+      if (Array.isArray(dataset) && !pendingMutation) {
         dataset = dataset.filter((item: any) => {
           if (!item || item[column] === undefined) return false;
           return String(item[column]).toLowerCase() === String(value).toLowerCase();
@@ -486,93 +570,33 @@ function createMockQueryBuilder(initialData: any, table?: string) {
       }
       return builder;
     },
-    upsert: async (payload: any) => {
-      let baseData = getMockTableData(table || "", null);
-      if (!Array.isArray(baseData)) baseData = [];
-      const items = Array.isArray(payload) ? payload : [payload];
-      for (const item of items) {
-        if (table === "site_settings") {
-          const idx = baseData.findIndex((r: any) => r.key === item.key);
-          if (idx >= 0) {
-            baseData[idx] = { ...baseData[idx], ...item };
-          } else {
-            baseData.push(item);
-          }
-        } else {
-          const idx = baseData.findIndex((r: any) => r.id && item.id && r.id === item.id);
-          if (idx >= 0) {
-            baseData[idx] = { ...baseData[idx], ...item };
-          } else {
-            baseData.push({ id: "item-" + Math.random().toString(36).substring(2, 9), ...item });
-          }
-        }
-      }
-      persistDataset(baseData);
-      dataset = baseData;
-      return { data: null, error: null };
+    upsert: (payload: any) => {
+      pendingMutation = { type: "upsert", payload };
+      return builder;
     },
-    insert: async (payload: any) => {
-      let baseData = getMockTableData(table || "", null);
-      if (!Array.isArray(baseData)) baseData = [];
-      const items = Array.isArray(payload) ? payload : [payload];
-      const inserted = items.map((item) => ({
-        id: item.id || "item-" + Math.random().toString(36).substring(2, 9),
-        created_at: new Date().toISOString(),
-        ...item,
-      }));
-      baseData = [...inserted, ...baseData];
-      persistDataset(baseData);
-      dataset = baseData;
-      return { data: inserted, error: null };
+    insert: (payload: any) => {
+      pendingMutation = { type: "insert", payload };
+      return builder;
     },
-    update: async (payload: any) => {
-      let baseData = getMockTableData(table || "", null);
-      if (!Array.isArray(baseData)) baseData = [];
-
-      baseData = baseData.map((item: any) => {
-        let matches = true;
-        for (const f of filters) {
-          if (!item || String(item[f.column]).toLowerCase() !== String(f.value).toLowerCase()) {
-            matches = false;
-            break;
-          }
-        }
-        if (matches) {
-          return { ...item, ...payload, updated_at: new Date().toISOString() };
-        }
-        return item;
-      });
-
-      persistDataset(baseData);
-      dataset = applyFilters(baseData);
-      return { data: null, error: null };
+    update: (payload: any) => {
+      pendingMutation = { type: "update", payload };
+      return builder;
     },
-    delete: async () => {
-      let baseData = getMockTableData(table || "", null);
-      if (!Array.isArray(baseData)) baseData = [];
-
-      baseData = baseData.filter((item: any) => {
-        for (const f of filters) {
-          if (item && String(item[f.column]).toLowerCase() === String(f.value).toLowerCase()) {
-            return false;
-          }
-        }
-        return true;
-      });
-
-      persistDataset(baseData);
-      dataset = applyFilters(baseData);
-      return { data: null, error: null };
+    delete: () => {
+      pendingMutation = { type: "delete" };
+      return builder;
     },
-    maybeSingle: async () => ({
-      data: Array.isArray(dataset) ? (dataset[0] ?? null) : dataset,
-      error: null,
-    }),
-    single: async () => ({
-      data: Array.isArray(dataset) ? (dataset[0] ?? null) : dataset,
-      error: null,
-    }),
-    then: (resolve: any) => resolve({ data: dataset, error: null }),
+    maybeSingle: async () => {
+      const result = await execute();
+      const rows = Array.isArray(result.data) ? result.data : result.data ? [result.data] : [];
+      return { data: rows[0] ?? null, error: result.error };
+    },
+    single: async () => {
+      const result = await execute();
+      const rows = Array.isArray(result.data) ? result.data : result.data ? [result.data] : [];
+      return { data: rows[0] ?? null, error: result.error };
+    },
+    then: (resolve: any, reject?: any) => execute().then(resolve, reject),
   };
   return builder as any;
 }
@@ -593,6 +617,11 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
         "site_settings",
         "orders",
         "order_items",
+        // Commerce catalog — must hit real Supabase (mock .update() is not chainable)
+        "products",
+        "product_inventory",
+        "product_reviews",
+        "vouchers",
       ]);
       if (prop === "from") {
         return (table: string) => {

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   deleteInboxMessageFn,
   fetchInboxMessages,
+  fetchOutboundMailHealth,
   replyInboxMessageFn,
   updateInboxStatus,
 } from "@/api/inbox";
@@ -26,7 +27,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Inbox, Mail, RefreshCw, Reply, Send, Trash2 } from "lucide-react";
+import { AlertTriangle, Inbox, Mail, RefreshCw, Reply, Send, Trash2 } from "lucide-react";
+import { buildGmailComposeUrl } from "@/lib/gmail-compose";
 
 export const Route = createFileRoute("/admin/inbox")({
   component: AdminInbox,
@@ -37,6 +39,7 @@ function AdminInbox() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [mobilePane, setMobilePane] = useState<"list" | "detail">("list");
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
 
   const inbox = useQuery({
     queryKey: ["admin-inbox"],
@@ -44,23 +47,61 @@ function AdminInbox() {
     refetchInterval: 20_000,
   });
 
+  const mailHealth = useQuery({
+    queryKey: ["admin-mail-health"],
+    queryFn: () => fetchOutboundMailHealth(),
+    staleTime: 60_000,
+  });
+
   const update = useMutation({
     mutationFn: (payload: { id: string; status: InboxStatus }) => updateInboxStatus({ data: payload }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["admin-inbox"] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => {
+      if (/message not found/i.test(error.message)) return;
+      toast.error(error.message);
+    },
   });
 
   const remove = useMutation({
-    mutationFn: (id: string) => deleteInboxMessageFn({ data: { id } }),
-    onSuccess: (_data, id) => {
-      toast.success("Message deleted");
-      const remaining = (inbox.data ?? []).filter((row) => row.id !== id);
-      setSelectedId(remaining[0]?.id ?? null);
-      void qc.invalidateQueries({ queryKey: ["admin-inbox"] });
+    mutationFn: async (id: string) => {
+      const result = await deleteInboxMessageFn({ data: { id } });
+      return result;
     },
-    onError: (error: Error) => toast.error(error.message),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["admin-inbox"] });
+      setHiddenIds((prev) => {
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+      const previous = qc.getQueryData<InboxMessage[]>(["admin-inbox"]);
+      const remaining = (previous ?? []).filter((row) => row.id !== id);
+      qc.setQueryData(["admin-inbox"], remaining);
+      setSelectedId((current) => {
+        if (current !== id) return current;
+        return remaining[0]?.id ?? null;
+      });
+      setMobilePane("list");
+      return { previous };
+    },
+    onSuccess: () => {
+      toast.success("Message deleted");
+      // Delay refetch slightly so KV index write is visible
+      window.setTimeout(() => {
+        void qc.invalidateQueries({ queryKey: ["admin-inbox"] });
+      }, 400);
+    },
+    onError: (error: Error, id, context) => {
+      setHiddenIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      if (context?.previous) qc.setQueryData(["admin-inbox"], context.previous);
+      toast.error(error.message || "Could not delete message");
+    },
   });
 
   const reply = useMutation({
@@ -71,7 +112,10 @@ function AdminInbox() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const messages = inbox.data ?? [];
+  const messages = useMemo(
+    () => (inbox.data ?? []).filter((row) => !hiddenIds.has(row.id)),
+    [inbox.data, hiddenIds],
+  );
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return messages;
@@ -104,6 +148,28 @@ function AdminInbox() {
         }
       />
 
+      {mailHealth.data && !mailHealth.data.customerDirectSend ? (
+        <SectionCard className="mb-4 border-amber-200 bg-amber-50/80">
+          <div className="flex gap-3">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+            <div className="space-y-1 text-sm">
+              <p className="font-semibold text-amber-950">Customer email delivery is not live</p>
+              <p className="text-amber-900/90 leading-relaxed">{mailHealth.data.hint}</p>
+              <p className="text-amber-900/80 text-xs leading-relaxed">
+                Run{" "}
+                <code className="rounded bg-white/80 px-1 py-0.5 text-[11px]">
+                  npx wrangler secret put RESEND_API_KEY
+                </code>{" "}
+                for worker <code className="rounded bg-white/80 px-1 py-0.5 text-[11px]">ecommerce-business</code>
+                , verify <code className="rounded bg-white/80 px-1 py-0.5 text-[11px]">smartzone.pk</code> on
+                resend.com, then redeploy. Until then, replies only reach{" "}
+                {mailHealth.data.adminNotifyTarget} (Gmail relay / compose).
+              </p>
+            </div>
+          </div>
+        </SectionCard>
+      ) : null}
+
       {inbox.isError ? (
         <SectionCard>
           <p className="text-sm text-destructive">{(inbox.error as Error).message}</p>
@@ -112,7 +178,7 @@ function AdminInbox() {
         <EmptyState
           icon={Inbox}
           title="Inbox is empty"
-          description="New mail to info@smartzone.pk and website contact queries will appear here."
+          description="New mail to info@smartzone.pk, contact form, and IoT leads appear here. Tip: Cloudflare blocks mail sent FROM your verified Gmail TO info@ (loop protection) — test from another address."
         />
       ) : (
         <div className="grid lg:grid-cols-[22rem_minmax(0,1fr)] gap-4">
@@ -248,7 +314,7 @@ function DeleteMessageButton({
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            onClick={onConfirm}
+            onClick={() => onConfirm()}
           >
             Delete message
           </AlertDialogAction>
@@ -276,7 +342,9 @@ function MessageDetail({
   onReply: (body: string) => Promise<{
     ok: true;
     delivered: boolean;
+    adminRelay?: boolean;
     composeUrl?: string;
+    detail?: string;
   }>;
 }) {
   const [replyBody, setReplyBody] = useState("");
@@ -288,33 +356,58 @@ function MessageDetail({
       toast.error("Write a reply first");
       return;
     }
-    const popup = window.open("about:blank", "sz-gmail-send");
     try {
       const result = await onReply(body);
-      if (result.delivered) {
-        popup?.close();
-        toast.success("Reply delivered to the customer from info@smartzone.pk");
-        setReplyBody("");
+      setReplyBody("");
+
+      if (result.delivered && !result.adminRelay) {
+        toast.success("Reply emailed to the customer from info@smartzone.pk");
         return;
       }
-      if (result.composeUrl && popup && !popup.closed) {
-        popup.location.href = result.composeUrl;
-        toast.success("Reply saved. Click Send in Gmail to deliver it to the customer.");
-      } else {
-        popup?.close();
-        toast.success("Reply saved. Open Gmail to deliver it to the customer.", {
-          action: result.composeUrl
-            ? {
-                label: "Open Gmail",
-                onClick: () => window.open(result.composeUrl, "_blank"),
-              }
-            : undefined,
+
+      const composeUrl =
+        result.composeUrl ||
+        buildGmailComposeUrl({
+          toEmail: message.from_email,
+          subject: message.subject,
+          body,
         });
+
+      if (result.delivered && result.adminRelay) {
+        toast.message("Reply saved. A copy is in your Gmail — open compose to finish delivery to the customer.", {
+          duration: 12_000,
+          action: {
+            label: "Open Gmail",
+            onClick: () => window.open(composeUrl, "_blank", "noopener,noreferrer"),
+          },
+        });
+        window.open(composeUrl, "_blank", "noopener,noreferrer");
+        return;
       }
-      setReplyBody("");
+
+      toast.message("Reply saved in Inbox. Open Gmail to deliver it to the customer.", {
+        duration: 12_000,
+        action: {
+          label: "Open Gmail",
+          onClick: () => window.open(composeUrl, "_blank", "noopener,noreferrer"),
+        },
+      });
+      window.open(composeUrl, "_blank", "noopener,noreferrer");
     } catch (error) {
-      popup?.close();
-      toast.error(error instanceof Error ? error.message : "Could not send reply");
+      const detail = error instanceof Error ? error.message : "Could not send reply";
+      const composeUrl = buildGmailComposeUrl({
+        toEmail: message.from_email,
+        subject: message.subject,
+        body,
+      });
+      toast.error(detail, {
+        duration: 12_000,
+        action: {
+          label: "Open Gmail",
+          onClick: () => window.open(composeUrl, "_blank", "noopener,noreferrer"),
+        },
+      });
+      window.open(composeUrl, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -367,7 +460,7 @@ function MessageDetail({
           ref={replyRef}
           value={replyBody}
           onChange={(e) => setReplyBody(e.target.value)}
-          placeholder="Write your reply. We deliver it to the customer, or open Gmail if needed."
+          placeholder="Write your reply and click Send…"
           className="min-h-28 bg-white"
           disabled={sending}
         />

@@ -59,7 +59,7 @@ export function HomeSolutionsStrip() {
                     <img
                       src={photo}
                       alt={item.title}
-                      className="absolute inset-0 h-full w-full object-contain object-center"
+                      className="absolute inset-0 h-full w-full object-cover object-center"
                     />
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-r from-[#071018] to-[#0052B4]" />
@@ -110,7 +110,7 @@ export function HomeSolutionsStrip() {
                     <img
                       src={photo}
                       alt=""
-                      className="h-full w-full object-contain object-center"
+                      className="h-full w-full object-cover object-center"
                     />
                   ) : (
                     <div className="h-full w-full bg-gradient-to-br from-[#0F2C59] to-[#0052B4]" />

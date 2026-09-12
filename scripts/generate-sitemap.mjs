@@ -69,6 +69,12 @@ const entries = [
   urlEntry(`${SITE}/iot-solutions`, "0.9", "weekly"),
   urlEntry(`${SITE}/iot-sensors`, "0.95", "weekly"),
   urlEntry(`${SITE}/smart-home`, "0.95", "weekly"),
+  urlEntry(`${SITE}/zigbee-sensors`, "0.95", "weekly"),
+  urlEntry(`${SITE}/wifi-sensors`, "0.95", "weekly"),
+  urlEntry(`${SITE}/mqtt-sensors`, "0.95", "weekly"),
+  urlEntry(`${SITE}/tuya-sensors`, "0.95", "weekly"),
+  urlEntry(`${SITE}/iot-devices`, "0.95", "weekly"),
+  urlEntry(`${SITE}/automations`, "0.95", "weekly"),
 ];
 
 for (const category of TOP_LEVEL_CATEGORIES) {

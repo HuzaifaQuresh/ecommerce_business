@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
@@ -134,20 +134,20 @@ export function HomeHeroSlider() {
               )}
               aria-hidden={!active}
             >
-              {photo ? (
+              {photo && (active || Math.abs(index - current) <= 1) ? (
                 <img
                   key={photo}
                   src={photo}
                   alt={slide.heading || slide.title || "SmartZone banner"}
-                  width={1600}
-                  height={900}
-                  className="absolute inset-0 h-full w-full object-contain object-center"
+                  width={1200}
+                  height={675}
+                  className="absolute inset-0 h-full w-full object-cover object-center"
                   draggable={false}
                   loading={active ? "eager" : "lazy"}
                   decoding="async"
-                  fetchPriority={index === 0 ? "high" : "low"}
+                  fetchPriority={active && index === current ? "high" : "low"}
                 />
-              ) : (
+              ) : photo ? null : (
                 <div className="absolute inset-0 bg-gradient-to-r from-[#0B192C] via-[#0F2C59] to-[#0052B4]" />
               )}
               {slide.hide_text ? (
@@ -189,22 +189,6 @@ export function HomeHeroSlider() {
 
         {slides.length > 1 ? (
           <>
-            <button
-              type="button"
-              className="absolute left-3 top-1/2 z-20 -translate-y-1/2 h-9 w-9 rounded-full bg-black/35 hover:bg-black/55 text-white grid place-items-center backdrop-blur-sm border border-white/15"
-              aria-label="Previous banner"
-              onClick={() => go(current - 1)}
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              className="absolute right-3 top-1/2 z-20 -translate-y-1/2 h-9 w-9 rounded-full bg-black/35 hover:bg-black/55 text-white grid place-items-center backdrop-blur-sm border border-white/15"
-              aria-label="Next banner"
-              onClick={() => go(current + 1)}
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
             <div className="absolute bottom-4 right-6 z-20 flex gap-2">
               {slides.map((slide, idx) => (
                 <button

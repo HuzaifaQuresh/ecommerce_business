@@ -6,13 +6,14 @@
   "main": "@tanstack/react-start/server-entry",
   "workers_dev": true,
   "routes": [
-    { "pattern": "smartzone.pk", "custom_domain": true }
+    { "pattern": "smartzone.pk", "custom_domain": true },
+    { "pattern": "www.smartzone.pk", "custom_domain": true }
   ],
   "observability": {
     "enabled": true
   },
   "cache": {
-    "enabled": false
+    "enabled": true
   },
   "kv_namespaces": [
     {
@@ -22,7 +23,10 @@
   ],
   "send_email": [
     {
-      "name": "EMAIL"
+      "name": "EMAIL",
+      // Cloudflare Email Routing only delivers to verified destinations.
+      // Customer mail needs RESEND_API_KEY Worker secret (resend.com).
+      "destination_address": "huzaifaqur67@gmail.com"
     }
   ],
   "vars": {

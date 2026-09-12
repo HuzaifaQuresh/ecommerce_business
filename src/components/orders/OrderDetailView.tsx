@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import { Calendar, CreditCard, Hash, Printer, Copy, Check, RotateCcw } from "lucide-react";
+import { PAYMENT_INSTRUCTIONS } from "@/lib/payment-instructions";
+import { paymentMethodLabel, recalculateOrderTotal } from "@/lib/order-payment";
 
 export function OrderDetailView({
   order,
@@ -34,6 +36,15 @@ export function OrderDetailView({
   const navigate = useNavigate();
 
   const items = order.items ?? [];
+  const paymentId = String(order.payment_method ?? "cod").toLowerCase();
+  const paymentLabel = paymentMethodLabel(paymentId);
+  const paymentNote = PAYMENT_INSTRUCTIONS[paymentId];
+  const isCod = paymentId === "cod";
+  const isPaidLike =
+    ["delivered", "shipped", "processing"].includes(String(order.status ?? "").toLowerCase()) &&
+    !isCod;
+  const totalLabel = isCod ? "Amount due (COD)" : isPaidLike ? "Order total" : "Amount due";
+  const calc = recalculateOrderTotal(order);
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(order.id);
@@ -154,44 +165,65 @@ export function OrderDetailView({
 
         <div className="rounded-xl border bg-card p-4 space-y-2 shadow-sm">
           <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">
-            Payment Summary
+            Payment details
           </h3>
-          <p className="capitalize flex items-center gap-2 font-medium text-sm">
-            <CreditCard className="h-4 w-4 text-primary" />
-            Payment via{" "}
-            {String(order.payment_method ?? "cod")
-              .replace(/_/g, " ")
-              .toUpperCase()}
+          <p className="flex items-center gap-2 font-medium text-sm">
+            <CreditCard className="h-4 w-4 text-primary shrink-0" />
+            <span>
+              Method: <span className="text-foreground">{paymentLabel}</span>
+            </span>
           </p>
+          {paymentNote ? (
+            <p className="text-xs text-muted-foreground leading-relaxed pl-6">{paymentNote}</p>
+          ) : null}
           <div className="border-t pt-2 space-y-1 text-sm">
-            {order.subtotal_pkr != null && (
-              <div className="flex justify-between text-muted-foreground">
-                <span>Subtotal</span>
-                <span>{fmtPKR(Number(order.subtotal_pkr))}</span>
-              </div>
-            )}
-            {Number(order.shipping_pkr) > 0 && (
+            <div className="flex justify-between text-muted-foreground">
+              <span>Subtotal</span>
+              <span>{fmtPKR(calc.breakdown.subtotal)}</span>
+            </div>
+            {calc.breakdown.shipping > 0 ? (
               <div className="flex justify-between text-muted-foreground">
                 <span>Shipping</span>
-                <span>{fmtPKR(Number(order.shipping_pkr))}</span>
+                <span>{fmtPKR(calc.breakdown.shipping)}</span>
+              </div>
+            ) : (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Shipping</span>
+                <span>Free</span>
               </div>
             )}
-            {Number(order.tax_pkr) > 0 && (
+            {calc.breakdown.tax > 0 && (
               <div className="flex justify-between text-muted-foreground">
                 <span>Tax / GST</span>
-                <span>{fmtPKR(Number(order.tax_pkr))}</span>
+                <span>{fmtPKR(calc.breakdown.tax)}</span>
               </div>
             )}
-            {Number(order.discount_pkr) > 0 && (
+            {calc.breakdown.payment_fee > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Payment fee ({paymentLabel})</span>
+                <span>{fmtPKR(calc.breakdown.payment_fee)}</span>
+              </div>
+            )}
+            {calc.breakdown.discount > 0 && (
               <div className="flex justify-between text-primary font-medium">
                 <span>Discount {order.voucher_code ? `(${order.voucher_code})` : ""}</span>
-                <span>−{fmtPKR(Number(order.discount_pkr))}</span>
+                <span>−{fmtPKR(calc.breakdown.discount)}</span>
               </div>
             )}
             <div className="flex justify-between font-bold text-base pt-1.5 border-t">
-              <span>Total Paid</span>
-              <span className="text-primary">{fmtPKR(Number(order.total_pkr))}</span>
+              <span>{totalLabel}</span>
+              <span className="text-primary">{fmtPKR(calc.stored)}</span>
             </div>
+            {!calc.matches ? (
+              <p className="text-[11px] text-amber-700 pt-1">
+                Recalculated total is {fmtPKR(calc.expected)} (subtotal − discount + shipping + tax +
+                fee). Stored total differs — verify before dispatch.
+              </p>
+            ) : (
+              <p className="text-[11px] text-muted-foreground pt-1">
+                Total = subtotal − discount + shipping + tax + payment fee
+              </p>
+            )}
           </div>
         </div>
       </div>

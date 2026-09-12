@@ -20,7 +20,11 @@ const FAQ = [
   },
   {
     q: "Do you offer smart home automations and scenes?",
-    a: "Yes. SmartZone supports Tuya / Smart Life automations for lighting, climate, curtains, locks, and sensor-triggered scenes.",
+    a: "Yes. SmartZone supports Tuya / Smart Life automations for lighting, climate, curtains, locks, and sensor-triggered scenes. See /automations for a dedicated guide.",
+  },
+  {
+    q: "What sensors work with smart home automations?",
+    a: "Zigbee sensors, WiFi sensors, and Tuya sensors trigger scenes. Browse dedicated pages for each protocol on smartzone.pk.",
   },
 ] as const;
 
@@ -92,7 +96,10 @@ function SmartHomePage() {
           </Link>
         </Button>
         <Button variant="outline" asChild>
-          <Link to="/iot-sensors">IoT & Zigbee sensors</Link>
+          <Link to="/automations">Automations guide</Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link to="/zigbee-sensors">Zigbee sensors</Link>
         </Button>
         <Button variant="outline" asChild>
           <Link to="/iot-solutions" hash="quote">

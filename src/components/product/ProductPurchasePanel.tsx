@@ -44,6 +44,7 @@ export function ProductPurchasePanel({ product, activeVoucher }: Props) {
   const discountPct = Number(product.discount_pct) || 0;
   const pricePkr = Number(product.price_pkr) || 0;
   const inStock = product.availability === "in_stock" && product.stock > 0;
+  const maxStock = product.availability === "in_stock" ? Math.max(0, Number(product.stock) || 0) : undefined;
   const original = discountPct > 0 ? pricePkr / (1 - discountPct / 100) : null;
 
   const safeTags = Array.isArray(product.tags) ? product.tags : [];
@@ -86,7 +87,12 @@ export function ProductPurchasePanel({ product, activeVoucher }: Props) {
       toast.error("Item not available");
       return;
     }
-    add(cartPayload, qty, { openDrawer: false });
+    const capped = maxStock !== undefined ? Math.min(qty, maxStock) : qty;
+    if (maxStock !== undefined && qty > maxStock) {
+      toast.message(`Only ${maxStock} left — quantity adjusted.`);
+      setQty(maxStock);
+    }
+    add(cartPayload, capped, { openDrawer: false, maxStock });
     if (!user) {
       navigate({ to: "/auth", search: { redirect: "/checkout", tab: "signin" } });
       return;
@@ -232,8 +238,18 @@ export function ProductPurchasePanel({ product, activeVoucher }: Props) {
               </span>
               <button
                 type="button"
-                onClick={() => setQty((q) => q + 1)}
-                className="px-3.5 h-full hover:bg-slate-100 transition-colors text-slate-600 rounded-r-xl flex items-center justify-center"
+                onClick={() =>
+                  setQty((q) => {
+                    const next = q + 1;
+                    if (maxStock !== undefined && next > maxStock) {
+                      toast.message(`Only ${maxStock} in stock.`);
+                      return maxStock;
+                    }
+                    return next;
+                  })
+                }
+                disabled={maxStock !== undefined && qty >= maxStock}
+                className="px-3.5 h-full hover:bg-slate-100 transition-colors text-slate-600 rounded-r-xl flex items-center justify-center disabled:opacity-40"
                 aria-label="Increase quantity"
               >
                 <Plus className="h-4 w-4" />
@@ -259,7 +275,13 @@ export function ProductPurchasePanel({ product, activeVoucher }: Props) {
             variant="outline"
             disabled={!inStock}
             onClick={() => {
-              add(cartPayload, qty);
+              const capped = maxStock !== undefined ? Math.min(qty, maxStock) : qty;
+              if (maxStock !== undefined && qty > maxStock) {
+                toast.message(`Only ${maxStock} left — quantity adjusted.`);
+                setQty(maxStock);
+              }
+              add(cartPayload, capped, { maxStock });
+              toast.success("Added to cart");
             }}
             className="flex-1 h-12 py-3.5 border-2 border-[#0052B4] text-[#0052B4] bg-white hover:bg-blue-50 font-bold rounded-xl text-sm sm:text-base transition inline-flex items-center justify-center gap-2"
           >

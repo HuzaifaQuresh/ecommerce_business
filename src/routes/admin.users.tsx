@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -98,6 +98,10 @@ type AuditLogRow = {
   old_role: string;
   new_role: string;
   created_at: string;
+  entity_id?: string | null;
+  old_status?: string | null;
+  new_status?: string | null;
+  metadata?: { email?: string; order_id?: string; total_pkr?: number; customer?: string } | null;
 };
 
 function AdminUsers() {
@@ -347,8 +351,15 @@ function AdminUsers() {
   const deleteAuditLog = async (id: string) => {
     setSaving(true);
     try {
-      const { error } = await supabase.from("audit_logs" as any).delete().eq("id", id);
+      const { data, error } = await supabase
+        .from("audit_logs" as any)
+        .delete()
+        .eq("id", id)
+        .select("id");
       if (error) throw error;
+      if (!data?.length) {
+        throw new Error("Delete blocked — refresh and try again, or check admin permissions.");
+      }
       toast.success("Log entry deleted");
       await refetchAudit();
     } catch (err: any) {
@@ -362,14 +373,18 @@ function AdminUsers() {
     if (!window.confirm("Clear the entire access log? This cannot be undone.")) return;
     setSaving(true);
     try {
-      const ids = (auditLogsData ?? []).map((l) => l.id);
-      if (!ids.length) {
-        toast.info("Access log is already empty");
+      // Match all rows (RLS still restricts to staff). Avoids only clearing the loaded page.
+      const { data, error } = await supabase
+        .from("audit_logs" as any)
+        .delete()
+        .not("id", "is", null)
+        .select("id");
+      if (error) throw error;
+      if (!data?.length) {
+        toast.info("Access log is already empty (or delete is not permitted)");
         return;
       }
-      const { error } = await supabase.from("audit_logs" as any).delete().in("id", ids);
-      if (error) throw error;
-      toast.success("Access log cleared");
+      toast.success(`Cleared ${data.length} log entr${data.length === 1 ? "y" : "ies"}`);
       await refetchAudit();
     } catch (err: any) {
       toast.error(err?.message || "Could not clear logs");
@@ -886,15 +901,20 @@ function AdminUsers() {
             title="Access log"
             description="Role changes and account disable, restore, or delete actions."
             actions={
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1"
-                disabled={saving || !(auditLogsData ?? []).length}
-                onClick={() => void clearAuditLogs()}
-              >
-                <Trash2 className="h-3.5 w-3.5" /> Clear all
-              </Button>
+              <div className="flex gap-2">
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/admin/audit">Full audit trail</Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1"
+                  disabled={saving || !(auditLogsData ?? []).length}
+                  onClick={() => void clearAuditLogs()}
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Clear all
+                </Button>
+              </div>
             }
           >
             <ResponsiveScroll>
@@ -927,6 +947,24 @@ function AdminUsers() {
                                 ? "Restored access"
                                 : "Deleted account"}
                             {log.old_role ? ` (${log.old_role} → ${log.new_role})` : ""}
+                            {typeof log.metadata?.email === "string"
+                              ? ` · ${log.metadata.email}`
+                              : ""}
+                          </span>
+                        ) : log.action === "ORDER_DELETE" ? (
+                          <span>
+                            Deleted order
+                            {typeof log.metadata?.order_id === "string"
+                              ? ` #${String(log.metadata.order_id).slice(0, 8).toUpperCase()}`
+                              : log.entity_id
+                                ? ` #${String(log.entity_id).slice(0, 8).toUpperCase()}`
+                                : ""}
+                          </span>
+                        ) : log.action === "ORDER_STATUS_CHANGE" ? (
+                          <span>
+                            Order status {log.old_status || log.old_role || "?"} →{" "}
+                            {log.new_status || log.new_role || "?"}
+                            {log.entity_id ? ` (#${log.entity_id})` : ""}
                           </span>
                         ) : (
                           <span className="flex items-center gap-2">

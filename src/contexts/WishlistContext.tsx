@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 export type WishlistItem = {
   id: string;
@@ -24,32 +25,85 @@ type WishlistContextType = {
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_KEY = "nexusiot_wishlist_v1";
+const WISHLIST_BASE = "nexusiot_wishlist_v1";
+const GUEST_KEY = `${WISHLIST_BASE}:guest`;
+
+function storageKey(userId: string | null) {
+  return userId ? `${WISHLIST_BASE}:u:${userId}` : GUEST_KEY;
+}
+
+function readWishlist(key: string): WishlistItem[] {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeWishlist(key: string, items: WishlistItem[]) {
+  localStorage.setItem(key, JSON.stringify(items));
+}
+
+function mergeWishlists(a: WishlistItem[], b: WishlistItem[]): WishlistItem[] {
+  const map = new Map<string, WishlistItem>();
+  for (const item of [...a, ...b]) {
+    map.set(item.id, item);
+  }
+  return [...map.values()];
+}
+
+function migrateLegacySharedWishlist() {
+  try {
+    const legacy = localStorage.getItem(WISHLIST_BASE);
+    if (!legacy) return;
+    if (!localStorage.getItem(GUEST_KEY)) {
+      localStorage.setItem(GUEST_KEY, legacy);
+    }
+    localStorage.removeItem(WISHLIST_BASE);
+  } catch {
+    /* ignore */
+  }
+}
 
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<WishlistItem[]>([]);
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
 
+  const [items, setItems] = useState<WishlistItem[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (stored) setItems(JSON.parse(stored));
-    } catch {
-      /* ignore */
+    if (typeof window === "undefined" || authLoading) return;
+
+    migrateLegacySharedWishlist();
+
+    if (userId) {
+      const userList = readWishlist(storageKey(userId));
+      const guestList = readWishlist(GUEST_KEY);
+      const merged = guestList.length ? mergeWishlists(userList, guestList) : userList;
+      if (guestList.length) {
+        writeWishlist(storageKey(userId), merged);
+        writeWishlist(GUEST_KEY, []);
+      }
+      setItems(merged);
+    } else {
+      setItems(readWishlist(GUEST_KEY));
     }
     setHydrated(true);
-  }, []);
+  }, [userId, authLoading]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || authLoading) return;
     try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items));
+      writeWishlist(storageKey(userId), items);
     } catch (e) {
       console.warn("Failed to persist wishlist:", e);
     }
-  }, [items, hydrated]);
+  }, [items, hydrated, userId, authLoading]);
 
   const wishlistIds = items.map((i) => i.id);
 

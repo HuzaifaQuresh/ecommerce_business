@@ -193,7 +193,7 @@ export function ContactUsDialog({ open, onOpenChange }: ContactUsDialogProps) {
                     id="contact-name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Ahmed Khan"
+                    placeholder="Username"
                     className="h-9 text-xs sm:text-sm"
                   />
                 </div>
@@ -207,7 +207,7 @@ export function ContactUsDialog({ open, onOpenChange }: ContactUsDialogProps) {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="ahmed@example.com"
+                    placeholder="you@example.com"
                     className="h-9 text-xs sm:text-sm"
                   />
                 </div>

@@ -1,6 +1,6 @@
 /** Bump this whenever the public catalog must invalidate browser + query caches. */
-export const CATALOG_STORAGE_VERSION = "smartzone_v7_fresh_catalog";
-export const CATALOG_QUERY_VERSION = "v7";
+export const CATALOG_STORAGE_VERSION = "smartzone_v9_product_upsert";
+export const CATALOG_QUERY_VERSION = "v9";
 
 export function catalogListKey(category?: string) {
   return ["products", CATALOG_QUERY_VERSION, category || "all"] as const;

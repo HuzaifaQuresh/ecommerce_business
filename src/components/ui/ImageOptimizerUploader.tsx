@@ -26,6 +26,8 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { isSupabaseConfigured } from "@/integrations/supabase/client";
+import { uploadImageBlob } from "@/lib/upload-image";
 
 export interface ImageOptimizerUploaderProps {
   value?: string;
@@ -92,10 +94,20 @@ export const ImageOptimizerUploader: React.FC<ImageOptimizerUploaderProps> = ({
         targetFormat: "image/webp",
       });
       setResult(res);
-      onChange(res.dataUrl);
-      toast.success(`Image converted to WebP! Reduced size by ${res.savingsPct}%`);
+
+      if (isSupabaseConfigured()) {
+        toast.info("Uploading image to CDN…");
+        const publicUrl = await uploadImageBlob(res.blob, {
+          folder: "merch",
+          fileName: file.name || res.name,
+        });
+        onChange(publicUrl);
+        toast.success(`Image uploaded (${res.savingsPct}% smaller)`);
+      } else {
+        throw new Error("Image CDN is not configured. Cannot save local base64 images.");
+      }
     } catch (err: any) {
-      toast.error(err.message || "Failed to compress image");
+      toast.error(err.message || "Failed to upload image");
     } finally {
       setIsProcessing(false);
     }
@@ -455,16 +467,31 @@ export const MultiImageOptimizerUploader: React.FC<MultiImageOptimizerUploaderPr
         results.push(res);
       }
 
-      const newWebpUrls = results.map((r) => r.dataUrl);
+      let newUrls: string[];
+      if (isSupabaseConfigured()) {
+        toast.info(`Uploading ${results.length} image(s) to CDN…`);
+        newUrls = [];
+        for (let i = 0; i < results.length; i++) {
+          const res = results[i];
+          const file = validFiles[i];
+          const url = await uploadImageBlob(res.blob, {
+            folder: "products",
+            fileName: file?.name || res.name,
+          });
+          newUrls.push(url);
+        }
+      } else {
+        throw new Error("Image CDN is not configured. Cannot save local base64 images.");
+      }
 
       if (!primaryImage) {
-        onPrimaryImageChange(newWebpUrls[0]);
-        const remaining = newWebpUrls.slice(1);
+        onPrimaryImageChange(newUrls[0]);
+        const remaining = newUrls.slice(1);
         if (remaining.length > 0) {
           onGalleryImagesChange([...galleryImages, ...remaining]);
         }
       } else {
-        onGalleryImagesChange([...galleryImages, ...newWebpUrls]);
+        onGalleryImagesChange([...galleryImages, ...newUrls]);
       }
 
       const totalSaved = results.reduce((acc, r) => acc + r.savingsPct, 0) / results.length;

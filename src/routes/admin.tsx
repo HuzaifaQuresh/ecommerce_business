@@ -11,6 +11,8 @@ import {
   BarChart3,
   Users,
   Inbox,
+  ClipboardList,
+  ScrollText,
 } from "lucide-react";
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -24,8 +26,10 @@ function AdminLayout() {
     { to: "/admin/products", label: "Products", icon: Package, group: "Commerce" },
     { to: "/admin/orders", label: "Orders", icon: ShoppingBag, group: "Commerce" },
     { to: "/admin/inbox", label: "Inbox", icon: Inbox, group: "Commerce" },
+    { to: "/admin/site-survey", label: "Site Survey", icon: ClipboardList, group: "Commerce" },
     { to: "/admin/vouchers", label: "Vouchers", icon: Ticket, group: "Commerce" },
     { to: "/admin/analytics", label: "Analytics", icon: BarChart3, group: "Insights" },
+    { to: "/admin/audit", label: "Audit trail", icon: ScrollText, group: "Insights" },
     { to: "/admin/settings", label: "Settings", icon: Settings, group: "Platform" },
   ];
   if (isSuper) {

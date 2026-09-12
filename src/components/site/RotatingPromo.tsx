@@ -103,7 +103,7 @@ export function PromoBannerCard({
         <img
           src={photo}
           alt={title}
-          className="absolute inset-0 h-full w-full object-contain object-center"
+          className="absolute inset-0 h-full w-full object-cover object-center"
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-r from-[#0B192C] to-[#0052B4]" />

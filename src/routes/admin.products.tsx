@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/select";
 import { DashboardPageHeader, ResponsiveScroll } from "@/components/site/PageLayout";
 import { toast } from "sonner";
+import { mergeProductsWithInventory, upsertInventoryStock } from "@/lib/inventory";
+import { CATALOG_QUERY_VERSION } from "@/lib/catalog-version";
 import {
   Plus,
   Pencil,
@@ -131,10 +133,10 @@ const AVAIL_LABELS: Record<string, { label: string; className: string }> = {
   obsolete: { label: "Obsolete", className: "bg-muted text-muted-foreground border-border" },
 };
 
-function withTimeout<T>(promise: any, ms = 800): Promise<T> {
+function withTimeout<T>(promise: any, ms = 12000): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      reject(new Error("Timeout of 800ms exceeded"));
+      reject(new Error(`Request timed out after ${ms}ms`));
     }, ms);
     promise.then(
       (res: any) => {
@@ -147,6 +149,26 @@ function withTimeout<T>(promise: any, ms = 800): Promise<T> {
       },
     );
   });
+}
+
+function isDbProductId(id?: string | null) {
+  if (!id) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+}
+
+function invalidateStorefrontCatalog(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ["admin-products"] });
+  qc.invalidateQueries({ queryKey: ["vendor-products"] });
+  qc.invalidateQueries({ queryKey: ["products"] });
+  qc.invalidateQueries({ queryKey: ["home-products"] });
+  qc.invalidateQueries({ queryKey: ["all-products"] });
+  qc.invalidateQueries({ queryKey: ["product"] });
+  qc.invalidateQueries({ queryKey: ["related"] });
+  // Versioned catalog keys used by the public storefront
+  qc.invalidateQueries({ queryKey: ["products", CATALOG_QUERY_VERSION] });
+  qc.invalidateQueries({ queryKey: ["home-products", CATALOG_QUERY_VERSION] });
+  qc.invalidateQueries({ queryKey: ["product", CATALOG_QUERY_VERSION] });
+  qc.invalidateQueries({ queryKey: ["related", CATALOG_QUERY_VERSION] });
 }
 
 const isCustomSpec = ([k]: [string, any]) => k !== "protocol" && k !== "power" && k !== "ecosystem";
@@ -178,9 +200,26 @@ function AdminProducts() {
     saveLocalProduct(updated);
     if (isSupabaseConfigured()) {
       try {
-        await withTimeout(supabase.from("products").update({ tags: nextTags }).eq("id", product.id), 1500);
-      } catch {
-        /* local save already applied */
+        const targetId = isDbProductId(product.id)
+          ? product.id
+          : (
+              await supabase.from("products").select("id").eq("slug", product.slug).maybeSingle()
+            ).data?.id;
+        if (!targetId) throw new Error("Product not in database yet — open and Save once first");
+        const { data, error } = await withTimeout<any>(
+          supabase
+            .from("products")
+            .update({ tags: nextTags })
+            .eq("id", targetId)
+            .select("id")
+            .maybeSingle(),
+          12000,
+        );
+        if (error) throw error;
+        if (!data?.id) throw new Error("Tag update blocked — sign in as admin and retry");
+      } catch (err: any) {
+        toast.error(err?.message || "Could not update tags in database");
+        return;
       }
     }
     toast.success(
@@ -201,24 +240,27 @@ function AdminProducts() {
     queryFn: async () => {
       initializeMockProductsOnClient();
       await syncServerProducts();
+      let list: typeof MOCK_PRODUCTS = [...MOCK_PRODUCTS];
       if (isSupabaseConfigured()) {
         try {
           const { data, error } = await withTimeout(
-            supabase.from("products").select("*").order("created_at", { ascending: false }),
-            1500,
+            supabase.from("products").select("*").order("updated_at", { ascending: false }),
+            12000,
           );
           if (!error && Array.isArray(data) && data.length > 0) {
-            // Combine DB items with local-only mock/custom items
+            // DB wins by slug/id — never keep a stale mock-* row when a live row exists
+            const dbBySlug = new Map(data.map((d: any) => [d.slug, d]));
             const localOnly = MOCK_PRODUCTS.filter(
-              (lp) => !data.some((d) => d.id === lp.id || d.slug === lp.slug),
+              (lp) => !dbBySlug.has(lp.slug) && !data.some((d: any) => d.id === lp.id),
             );
-            return [...localOnly, ...data];
+            list = [...data, ...localOnly] as typeof MOCK_PRODUCTS;
           }
         } catch {
           /* fallback */
         }
       }
-      return [...MOCK_PRODUCTS];
+      // Live first-come stock overlay (product_inventory by slug)
+      return mergeProductsWithInventory(list);
     },
   });
 
@@ -357,54 +399,69 @@ function AdminProducts() {
       tags: tagsArr,
     };
 
-    const targetId = form.id || `mock-${Date.now()}`;
-    const localProduct = {
-      ...payload,
-      id: targetId,
-      rating: (form as any).rating || 4.5,
-      gallery_urls: form.gallery_urls || [],
-    };
+    let savedId = form.id || `user-${Date.now()}`;
+    let dbSynced = !isSupabaseConfigured();
 
-    // 1. Instantly save in local storage & memory
-    saveLocalProduct(localProduct as any);
+    // 1. Live inventory (first-come source of truth by slug)
+    try {
+      await upsertInventoryStock(slug, parsedStock);
+    } catch (err) {
+      console.warn("Inventory upsert failed:", err);
+    }
 
-    // 2. If Supabase is configured, sync to database
+    // 2. Persist to Supabase products (source of truth for storefront)
+    // Catalog SKUs use mock-* ids — always upsert by unique slug so edits actually land in DB.
+    // Verify with .select() because RLS can silently update 0 rows without an error.
     if (isSupabaseConfigured()) {
-      if (form.id) {
-        try {
-          const { error } = await withTimeout(
-            supabase.from("products").update(payload).eq("id", form.id),
-            1500,
+      try {
+        const row = {
+          ...payload,
+          ...(isDbProductId(form.id) ? { id: form.id } : {}),
+        };
+
+        const { data: saved, error } = await withTimeout<any>(
+          supabase
+            .from("products")
+            .upsert(row, { onConflict: "slug" })
+            .select("id, slug, updated_at")
+            .maybeSingle(),
+          15000,
+        );
+
+        if (error) throw error;
+        if (!saved?.id) {
+          throw new Error(
+            "Save blocked by database permissions. Sign out/in as admin (or super admin) and try again.",
           );
-          if (error) console.warn("Supabase product update error:", error);
-        } catch (err: any) {
-          console.warn("Supabase update failed, saved locally:", err);
         }
-      } else {
-        try {
-          const { data, error } = await withTimeout(
-            supabase.from("products").insert(payload).select("id").maybeSingle(),
-            1500,
-          );
-          if (!error && data?.id) {
-            saveLocalProduct({ ...localProduct, id: data.id } as any);
-          }
-        } catch (err: any) {
-          console.warn("Supabase insert failed, saved locally:", err);
-        }
+
+        savedId = saved.id;
+        dbSynced = true;
+      } catch (err: any) {
+        console.error("Supabase product save failed:", err);
+        const msg = err?.message || "Could not save product to database";
+        toast.error(msg);
+        setSaving(false);
+        return;
       }
     }
 
-    toast.success(form.id ? "Product updated successfully!" : "Product created successfully!");
+    const localProduct = {
+      ...payload,
+      id: savedId,
+      rating: (form as any).rating || 4.5,
+      gallery_urls: form.gallery_urls || [],
+    };
+    saveLocalProduct(localProduct as any);
+
+    if (dbSynced) {
+      toast.success(form.id ? "Product updated on smartzone.pk" : "Product created on smartzone.pk");
+    } else {
+      toast.success(form.id ? "Product updated locally" : "Product created locally");
+    }
     setOpen(false);
     setForm(EMPTY);
-
-    qc.invalidateQueries({ queryKey: ["admin-products"] });
-    qc.invalidateQueries({ queryKey: ["vendor-products"] });
-    qc.invalidateQueries({ queryKey: ["products"] });
-    qc.invalidateQueries({ queryKey: ["all-products"] });
-    qc.invalidateQueries({ queryKey: ["product"] });
-    qc.invalidateQueries({ queryKey: ["related"] });
+    invalidateStorefrontCatalog(qc);
     } finally {
       setSaving(false);
     }
@@ -414,18 +471,23 @@ function AdminProducts() {
     deleteLocalProduct(id);
     if (isSupabaseConfigured()) {
       try {
-        await withTimeout(supabase.from("products").delete().eq("id", id), 1500);
-      } catch (err) {
+        if (isDbProductId(id)) {
+          const { error } = await withTimeout(supabase.from("products").delete().eq("id", id), 12000);
+          if (error) throw error;
+        } else {
+          // Built-in catalog ids aren't in DB — try slug delete if present in list
+          const match = (data ?? []).find((p) => p.id === id);
+          if (match?.slug) {
+            await withTimeout(supabase.from("products").delete().eq("slug", match.slug), 12000);
+          }
+        }
+      } catch (err: any) {
         console.warn("Supabase delete failed:", err);
+        toast.error(err?.message || "Could not delete from database");
       }
     }
     toast.success("Product deleted successfully");
-    qc.invalidateQueries({ queryKey: ["admin-products"] });
-    qc.invalidateQueries({ queryKey: ["vendor-products"] });
-    qc.invalidateQueries({ queryKey: ["products"] });
-    qc.invalidateQueries({ queryKey: ["all-products"] });
-    qc.invalidateQueries({ queryKey: ["product"] });
-    qc.invalidateQueries({ queryKey: ["related"] });
+    invalidateStorefrontCatalog(qc);
   };
 
   const start = filtered.length ? (safePage - 1) * PAGE_SIZE + 1 : 0;
@@ -794,6 +856,14 @@ function AdminProducts() {
                       <span className={cn("text-xs tabular-nums", Number(p.stock) < LOW_STOCK_QTY && "text-amber-600 font-semibold")}>
                         Qty {p.stock}
                       </span>
+                      {p.availability === "in_stock" ? (
+                        <span
+                          className="text-[9px] uppercase tracking-wide font-semibold text-emerald-700/80"
+                          title="Live inventory (first-come)"
+                        >
+                          Live
+                        </span>
+                      ) : null}
                     </div>
                     <div className="flex gap-1">
                       <Button

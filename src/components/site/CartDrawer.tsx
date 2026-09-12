@@ -164,7 +164,10 @@ export function CartDrawer() {
                           <button
                             type="button"
                             onClick={() => setQty(i.id, i.quantity + 1)}
-                            className="grid h-8 w-8 place-items-center hover:bg-slate-50"
+                            disabled={
+                              typeof i.maxStock === "number" && i.quantity >= i.maxStock
+                            }
+                            className="grid h-8 w-8 place-items-center hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none"
                             aria-label="Increase quantity"
                           >
                             <Plus className="h-3 w-3" />
@@ -174,6 +177,11 @@ export function CartDrawer() {
                           {fmtPKR(i.price_pkr * i.quantity)}
                         </span>
                       </div>
+                      {typeof i.maxStock === "number" && i.quantity >= i.maxStock ? (
+                        <p className="mt-1 text-[11px] font-medium text-amber-700">
+                          Max available: {i.maxStock}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 );

@@ -588,7 +588,7 @@ function VendorAuthPage() {
                   <Input
                     id="v-name"
                     autoComplete="name"
-                    placeholder="e.g. Ahmed Khan"
+                    placeholder="Username"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                   />

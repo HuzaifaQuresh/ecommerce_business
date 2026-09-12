@@ -11,18 +11,25 @@ const SKIP_TRAILING_REDIRECT = new Set(["/", ""]);
  */
 export function canonicalRedirect(request: Request): Response | null {
   const url = new URL(request.url);
-  const host = url.hostname.toLowerCase();
+  const hostHeader = (request.headers.get("host") || url.hostname)
+    .toLowerCase()
+    .split(":")[0]
+    .trim();
+  const host = hostHeader || url.hostname.toLowerCase();
   let needsRedirect = false;
 
   // Prefer apex domain (www → smartzone.pk)
-  if (host === `www.${CANONICAL_HOST}`) {
+  if (host === `www.${CANONICAL_HOST}` || url.hostname.toLowerCase() === `www.${CANONICAL_HOST}`) {
     url.hostname = CANONICAL_HOST;
     needsRedirect = true;
   }
 
   // Workers / local may see http on the edge URL — only redirect when Host is production
   if (
-    (host === CANONICAL_HOST || host === `www.${CANONICAL_HOST}`) &&
+    (host === CANONICAL_HOST ||
+      host === `www.${CANONICAL_HOST}` ||
+      url.hostname.toLowerCase() === CANONICAL_HOST ||
+      url.hostname.toLowerCase() === `www.${CANONICAL_HOST}`) &&
     url.protocol === "http:"
   ) {
     url.protocol = "https:";
@@ -41,12 +48,10 @@ export function canonicalRedirect(request: Request): Response | null {
 
   if (!needsRedirect) return null;
 
-  // Preserve path/search/hash on canonical host
+  // Always land on https://smartzone.pk
   const target = new URL(url.pathname + url.search + url.hash, SITE_ORIGIN);
-  if (host === `www.${CANONICAL_HOST}` || host === CANONICAL_HOST) {
-    target.hostname = CANONICAL_HOST;
-    target.protocol = "https:";
-  }
+  target.hostname = CANONICAL_HOST;
+  target.protocol = "https:";
 
   return new Response(null, {
     status: 301,

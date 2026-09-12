@@ -146,7 +146,7 @@ export function TrackOrderDialog({ open, onOpenChange }: TrackOrderDialogProps) 
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g., ahmed@example.com"
+                  placeholder="you@example.com"
                   className="h-10 text-xs sm:text-sm"
                 />
               </div>

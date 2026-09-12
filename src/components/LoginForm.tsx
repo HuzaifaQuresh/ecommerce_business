@@ -222,7 +222,7 @@ export function LoginForm({ onSuccess, defaultMode = "signin" }: LoginFormProps)
               <Input
                 id="fullName"
                 type="text"
-                placeholder="John Doe"
+                placeholder="Username"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 disabled={busy}

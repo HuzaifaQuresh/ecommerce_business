@@ -104,19 +104,23 @@ function ConsultationForm({
     try {
       await submitInboxLead({
         data: {
-          source: "iot_lead",
+          source: "site_survey",
           name: form.name.trim(),
           email: form.email.trim(),
-          subject: form.solution || "IoT consultation",
-          message: form.message.trim() || "Please contact me about this IoT solution.",
+          subject: `Site survey — ${form.solution}`,
+          message: form.message.trim() || "Please schedule a site survey.",
           company: form.company.trim(),
           phone: form.phone.trim(),
           solution: form.solution,
         },
       });
       setDone(true);
-    } catch {
-      toast.error(`Could not submit. Email ${contactEmail} or use WhatsApp.`);
+    } catch (err) {
+      toast.error(
+        err instanceof Error && err.message
+          ? err.message
+          : `Could not submit. Email ${contactEmail} or use WhatsApp.`,
+      );
     } finally {
       setBusy(false);
     }
@@ -158,7 +162,7 @@ function ConsultationForm({
           <Input
             id={`${idPrefix}-name`}
             autoComplete="name"
-            placeholder="Muhammad Huzaifa"
+            placeholder="Username"
             className="mt-1.5 min-h-[44px]"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -194,7 +198,7 @@ function ConsultationForm({
             id={`${idPrefix}-phone`}
             type="tel"
             autoComplete="tel"
-            placeholder="+92 332 3059259"
+            placeholder="+92 3XX XXXXXXX"
             className="mt-1.5 min-h-[44px]"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -388,7 +392,7 @@ function Solutions() {
                   <img
                     src={image}
                     alt=""
-                    className="h-full w-full object-contain object-center"
+                    className="h-full w-full object-cover object-center"
                   />
                 </div>
                 <div className="p-5 sm:p-6">

@@ -21,6 +21,10 @@ dist-ssr
 .env.*
 !.env.example
 
+# Private credentials dump (never push)
+docs/CREDENTIALS.local.md
+**/CREDENTIALS.local.md
+
 # Vercel / Netlify local link metadata
 .vercel/
 .netlify/
@@ -28,6 +32,16 @@ dist-ssr
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
+
+# Supabase CLI temp
+supabase/.temp/
+
+# Bulky catalogue extract dumps (optional local only)
+scripts/tysh-2026-extract.txt
+scripts/tysh-2026-pages.txt
+scripts/tysh-pages-*.json
+scripts/tysh-pages-*.min.json
+scripts/tysh-pages/
 
 # Editor directories and files
 .vscode/*

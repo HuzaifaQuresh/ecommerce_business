@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MOCK_VOUCHERS } from "@/lib/mock-data";
 import type { Voucher } from "@/types/commerce";
 
-function withTimeout<T>(promise: Promise<T>, ms = 800): Promise<T> {
+function withTimeout<T>(promise: PromiseLike<T>, ms = 12000): Promise<T> {
   let timeoutId: any;
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {

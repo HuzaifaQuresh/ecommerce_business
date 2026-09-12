@@ -26,7 +26,7 @@ function PhotoFrame({
   return (
     <div className={cn("absolute inset-0 bg-[#071018]", className)}>
       {photo ? (
-        <img src={photo} alt={alt} className="h-full w-full object-contain object-center" />
+        <img src={photo} alt={alt} width={640} height={360} loading="lazy" decoding="async" className="h-full w-full object-cover object-center" />
       ) : (
         <div className="h-full w-full bg-gradient-to-br from-[#0B192C] to-[#0052B4]" />
       )}

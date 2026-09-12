@@ -123,6 +123,8 @@ export type OrderRow = {
   status: string;
   created_at: string;
   user_id?: string | null;
+  /** True when inventory was decremented for this order (restore on cancel). */
+  stock_adjusted?: boolean;
 };
 
 export type OrderWithItems = OrderRow & { items: OrderItemRow[] };

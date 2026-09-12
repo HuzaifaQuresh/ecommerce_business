@@ -3,6 +3,11 @@ import { estimateDeliveryDate } from "@/lib/order-fulfillment";
 import { getMockOrderWithItems, MOCK_ORDERS_WITH_ITEMS, MOCK_ORDERS } from "@/lib/mock-data";
 import type { ItemFulfillmentStatus, OrderStatus } from "@/lib/order-fulfillment";
 import type { OrderItemRow, OrderRow, OrderWithItems } from "@/types/commerce";
+import {
+  decrementInventory,
+  restoreInventory,
+  stockEnforcedLines,
+} from "@/lib/inventory";
 
 function isDemoOrderId(id: string | undefined) {
   return Boolean(id && id.startsWith("mock-order-"));
@@ -253,7 +258,20 @@ export async function placeOrder(input: {
     throw new Error("Sign in is required to complete your order.");
   }
 
+  const stockLines = stockEnforcedLines(
+    items.map((i) => ({
+      product_slug: i.product_slug,
+      quantity: i.quantity,
+    })),
+  );
+
+  let stockReserved = false;
   try {
+    if (stockLines.length) {
+      await decrementInventory(stockLines);
+      stockReserved = true;
+    }
+
     const { data: created, error } = await supabase
       .from("orders")
       .insert({
@@ -277,6 +295,7 @@ export async function placeOrder(input: {
         user_id: sanitizedUserId,
         expected_delivery_at: expected.toISOString(),
         status: "pending",
+        stock_adjusted: stockReserved,
       })
       .select()
       .single();
@@ -297,12 +316,10 @@ export async function placeOrder(input: {
     );
     if (e2) throw e2;
 
-    // Increment voucher used_count if a voucher was applied
     if (input.voucher_code) {
       await supabase
         .rpc("increment_voucher_use", { voucher_code: input.voucher_code })
         .catch(() => {
-          // Non-fatal: fallback to manual increment
           supabase
             .from("vouchers")
             .select("id, used_count")
@@ -320,6 +337,7 @@ export async function placeOrder(input: {
 
     const fullOrder: OrderWithItems = {
       ...(created as OrderRow),
+      stock_adjusted: stockReserved,
       items: items.map((i, index) => ({
         id: `item-${created.id}-${index}`,
         order_id: created.id,
@@ -337,11 +355,31 @@ export async function placeOrder(input: {
 
     return created as OrderRow;
   } catch (err) {
+    if (stockReserved && stockLines.length) {
+      try {
+        await restoreInventory(stockLines);
+      } catch (restoreErr) {
+        console.error("Failed to restore stock after order error:", restoreErr);
+      }
+      stockReserved = false;
+    }
+
+    // Stock / validation errors should surface even when Supabase is configured
+    const message = toErrorMessage(err, "Could not place your order. Please try again.");
+    if (/out of stock|insufficient stock|only \d+ left/i.test(message)) {
+      throw new Error(message);
+    }
+
     if (isSupabaseConfigured()) {
       console.error("placeOrder failed:", err);
-      throw new Error(toErrorMessage(err, "Could not place your order. Please try again."));
+      throw new Error(message);
     }
     console.warn("Supabase placeOrder failed, falling back to local storage:", err);
+
+    if (stockLines.length) {
+      await decrementInventory(stockLines);
+      stockReserved = true;
+    }
 
     const createdId = "ord-" + Math.random().toString(36).substring(2, 11).toUpperCase();
 
@@ -368,6 +406,7 @@ export async function placeOrder(input: {
       expected_delivery_at: expected.toISOString(),
       status: "pending",
       created_at: orderedAt.toISOString(),
+      stock_adjusted: stockReserved,
     };
 
     const createdItems = items.map((i, index) => ({
@@ -395,27 +434,70 @@ export async function placeOrder(input: {
 }
 
 export async function updateOrderStatus(id: string, status: OrderStatus) {
+  const restoreLinesFromOrder = async (order: OrderWithItems) => {
+    if (status !== "cancelled") return;
+    if (order.stock_adjusted === false) return;
+    // Treat missing flag as true for older local orders that may have decremented
+    const lines = stockEnforcedLines(
+      (order.items ?? []).map((i) => ({
+        product_slug: i.product_slug,
+        quantity: i.quantity,
+      })),
+    );
+    if (!lines.length) return;
+    await restoreInventory(lines);
+  };
+
   const localList = getLocalOrders();
   const idx = localList.findIndex((o) => o.id === id);
   if (idx !== -1) {
     const oldStatus = localList[idx].status;
+    if (status === "cancelled" && oldStatus !== "cancelled") {
+      await restoreLinesFromOrder(localList[idx]);
+      localList[idx].stock_adjusted = false;
+    }
     localList[idx].status = status;
     localStorage.setItem("nexus_local_orders", JSON.stringify(localList));
 
-    const existingLogs = JSON.parse(localStorage.getItem("nexus_audit_logs") || "[]");
-    const newLog = {
-      id: "log-" + Date.now(),
-      actor_role: "admin",
+    const { writeAuditEvent } = await import("@/lib/audit");
+    await writeAuditEvent({
       action: "ORDER_STATUS_CHANGE",
-      entity_type: "order",
-      entity_id: id,
-      old_status: oldStatus,
-      new_status: status,
-      details: { order_id: id, total_pkr: localList[idx].total_pkr },
-      created_at: new Date().toISOString(),
-    };
-    localStorage.setItem("nexus_audit_logs", JSON.stringify([newLog, ...existingLogs]));
+      oldValue: oldStatus,
+      newValue: status,
+      entityType: "order",
+      entityId: id,
+      summary: `Order status ${oldStatus} → ${status}`,
+      metadata: {
+        order_id: id,
+        total_pkr: localList[idx].total_pkr,
+        payment_method: localList[idx].payment_method,
+        customer_name: localList[idx].customer_name,
+      },
+    });
     return;
+  }
+
+  if (status === "cancelled") {
+    const { data: orderRow } = await supabase
+      .from("orders")
+      .select("id, status, stock_adjusted")
+      .eq("id", id)
+      .maybeSingle();
+    if (orderRow && orderRow.status !== "cancelled" && orderRow.stock_adjusted !== false) {
+      const { data: itemRows } = await supabase
+        .from("order_items")
+        .select("product_slug, quantity")
+        .eq("order_id", id);
+      const lines = stockEnforcedLines(
+        (itemRows ?? []).map((i) => ({
+          product_slug: i.product_slug,
+          quantity: i.quantity,
+        })),
+      );
+      if (lines.length) await restoreInventory(lines);
+      await supabase.from("orders").update({ status, stock_adjusted: false }).eq("id", id);
+      return;
+    }
   }
 
   const { error } = await supabase.from("orders").update({ status }).eq("id", id);
@@ -431,11 +513,28 @@ export async function updateOrderTracking(
   if (idx !== -1) {
     localList[idx] = { ...localList[idx], ...patch };
     localStorage.setItem("nexus_local_orders", JSON.stringify(localList));
+    const { writeAuditEvent } = await import("@/lib/audit");
+    await writeAuditEvent({
+      action: "ORDER_TRACKING_UPDATE",
+      entityType: "order",
+      entityId: id,
+      summary: `Tracking updated on #${id.slice(0, 8).toUpperCase()}`,
+      metadata: { order_id: id, ...patch },
+    });
     return;
   }
 
   const { error } = await supabase.from("orders").update(patch).eq("id", id);
   if (error) throw error;
+
+  const { writeAuditEvent } = await import("@/lib/audit");
+  await writeAuditEvent({
+    action: "ORDER_TRACKING_UPDATE",
+    entityType: "order",
+    entityId: id,
+    summary: `Tracking updated on #${id.slice(0, 8).toUpperCase()}`,
+    metadata: { order_id: id, ...patch },
+  });
 }
 
 export async function updateOrderItemFulfillment(
@@ -468,3 +567,108 @@ export async function updateOrderItemFulfillment(
   const { error } = await supabase.from("order_items").update(patch).eq("id", itemId);
   if (error) throw error;
 }
+
+/**
+ * Permanently remove an order from the admin order log.
+ * Restores inventory when the order had reserved stock and was not already cancelled.
+ */
+export async function deleteOrder(id: string): Promise<void> {
+  const cleanId = id.trim();
+  if (!cleanId) throw new Error("Order id is required");
+
+  // Local / demo orders
+  const localList = getLocalOrders();
+  const localIdx = localList.findIndex((o) => o.id === cleanId);
+  if (localIdx !== -1) {
+    const order = localList[localIdx];
+    if (order.status !== "cancelled" && order.stock_adjusted !== false) {
+      const lines = stockEnforcedLines(
+        (order.items ?? []).map((i) => ({
+          product_slug: i.product_slug,
+          quantity: i.quantity,
+        })),
+      );
+      if (lines.length) await restoreInventory(lines);
+    }
+    localList.splice(localIdx, 1);
+    localStorage.setItem("nexus_local_orders", JSON.stringify(localList));
+    window.dispatchEvent(new Event("nexus-orders-update"));
+
+    const { writeAuditEvent } = await import("@/lib/audit");
+    await writeAuditEvent({
+      action: "ORDER_DELETE",
+      oldValue: order.status,
+      newValue: "deleted",
+      entityType: "order",
+      entityId: cleanId,
+      summary: `Deleted order #${cleanId.slice(0, 8).toUpperCase()} · ${order.customer_name}`,
+      metadata: {
+        order_id: cleanId,
+        total_pkr: order.total_pkr,
+        customer: order.customer_name,
+        payment_method: order.payment_method,
+        subtotal_pkr: order.subtotal_pkr,
+        tax_pkr: order.tax_pkr,
+        payment_fee_pkr: order.payment_fee_pkr,
+      },
+    });
+    return;
+  }
+
+  if (isDemoOrderId(cleanId)) {
+    throw new Error("Demo orders cannot be deleted from the live store");
+  }
+
+  const { data: orderRow, error: fetchErr } = await supabase
+    .from("orders")
+    .select("id, status, stock_adjusted, total_pkr, customer_name")
+    .eq("id", cleanId)
+    .maybeSingle();
+  if (fetchErr) throw fetchErr;
+  if (!orderRow) throw new Error("Order not found");
+
+  if (orderRow.status !== "cancelled" && orderRow.stock_adjusted !== false) {
+    const { data: itemRows } = await supabase
+      .from("order_items")
+      .select("product_slug, quantity")
+      .eq("order_id", cleanId);
+    const lines = stockEnforcedLines(
+      (itemRows ?? []).map((i) => ({
+        product_slug: i.product_slug,
+        quantity: i.quantity,
+      })),
+    );
+    if (lines.length) await restoreInventory(lines);
+  }
+
+  // Cascade deletes order_items via FK
+  const { data: deleted, error } = await supabase
+    .from("orders")
+    .delete()
+    .eq("id", cleanId)
+    .select("id");
+  if (error) throw error;
+  if (!deleted?.length) {
+    throw new Error("Delete blocked — refresh and try again, or check admin permissions.");
+  }
+
+  const { writeAuditEvent } = await import("@/lib/audit");
+  await writeAuditEvent({
+    action: "ORDER_DELETE",
+    oldValue: orderRow.status,
+    newValue: "deleted",
+    entityType: "order",
+    entityId: cleanId,
+    summary: `Deleted order #${cleanId.slice(0, 8).toUpperCase()} · ${orderRow.customer_name}`,
+    metadata: {
+      order_id: cleanId,
+      total_pkr: orderRow.total_pkr,
+      customer: orderRow.customer_name,
+    },
+  });
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("nexus-orders-update"));
+  }
+}
+

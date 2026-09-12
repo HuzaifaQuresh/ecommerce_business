@@ -6,7 +6,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { optimizeProductImageUrl } from "@/lib/product-image";
+import { optimizeProductImageUrl, productImageSizes, productImageSrcSet } from "@/lib/product-image";
 import { cn } from "@/lib/utils";
 
 export type Product = {
@@ -62,13 +62,17 @@ export const ProductCard = React.memo(function ProductCard({
       toast.error("Item not available");
       return;
     }
-    add({
-      id: p.id,
-      title: p.title,
-      price_pkr: p.price_pkr,
-      image_url: p.image_url,
-      slug: productSlug,
-    });
+    add(
+      {
+        id: p.id,
+        title: p.title,
+        price_pkr: p.price_pkr,
+        image_url: p.image_url,
+        slug: productSlug,
+      },
+      1,
+      p.availability === "in_stock" ? { maxStock: Math.max(0, Number(p.stock) || 0) } : undefined,
+    );
   };
 
   // Generate a mock but stable rating and review count based on the product ID hash for consistency
@@ -86,6 +90,8 @@ export const ProductCard = React.memo(function ProductCard({
         >
           <img
             src={optimizeProductImageUrl(p.image_url, "card")}
+            srcSet={productImageSrcSet(p.image_url, "card")}
+            sizes={productImageSizes("card")}
             alt={p.title}
             width="144"
             height="144"
@@ -168,6 +174,8 @@ export const ProductCard = React.memo(function ProductCard({
       >
         <img
           src={optimizeProductImageUrl(p.image_url, "card")}
+          srcSet={productImageSrcSet(p.image_url, "card")}
+          sizes={productImageSizes("card")}
           alt={p.title}
           width="360"
           height="270"

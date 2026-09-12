@@ -2,13 +2,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { getMockReviewsForProduct } from "@/lib/mock-data";
 import type { ProductReview } from "@/types/commerce";
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function isUUID(val: any): boolean {
-  if (typeof val !== "string") return false;
-  return UUID_REGEX.test(val);
-}
-
 function getLocalReviews(productId: string): ProductReview[] {
   if (typeof window === "undefined") return [];
   try {
@@ -29,37 +22,29 @@ function saveLocalReview(productId: string, review: ProductReview) {
   }
 }
 
-function withTimeout<T>(promise: Promise<T>, ms = 800): Promise<T> {
-  let timeoutId: any;
+function withTimeout<T>(promise: PromiseLike<T>, ms = 12000): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
       reject(new Error(`Timeout of ${ms}ms exceeded`));
     }, ms);
   });
   return Promise.race([promise, timeoutPromise]).finally(() => {
-    clearTimeout(timeoutId);
+    if (timeoutId) clearTimeout(timeoutId);
   });
 }
 
 export async function fetchProductReviews(productId: string) {
   const local = getLocalReviews(productId);
-  if (!isUUID(productId)) {
-    const merged = [...local];
-    const mocks = getMockReviewsForProduct(productId);
-    for (const mr of mocks) {
-      if (!merged.some((r) => r.id === mr.id)) {
-        merged.push(mr);
-      }
-    }
-    return merged;
-  }
+  const key = String(productId || "").trim();
+  if (!key) return local;
 
   try {
     const { data, error } = await withTimeout(
       supabase
         .from("product_reviews")
         .select("*")
-        .eq("product_id", productId)
+        .eq("product_id", key)
         .order("created_at", { ascending: false }),
     );
     if (error) throw error;
@@ -71,17 +56,19 @@ export async function fetchProductReviews(productId: string) {
         merged.push(dbr);
       }
     }
-    return merged;
+    if (merged.length) return merged;
   } catch {
-    const merged = [...local];
-    const mocks = getMockReviewsForProduct(productId);
-    for (const mr of mocks) {
-      if (!merged.some((r) => r.id === mr.id)) {
-        merged.push(mr);
-      }
-    }
-    return merged;
+    /* fall through to mocks */
   }
+
+  const merged = [...local];
+  const mocks = getMockReviewsForProduct(key);
+  for (const mr of mocks) {
+    if (!merged.some((r) => r.id === mr.id)) {
+      merged.push(mr);
+    }
+  }
+  return merged;
 }
 
 export async function submitProductReview(input: {
@@ -91,9 +78,12 @@ export async function submitProductReview(input: {
   body: string;
   user_id?: string | null;
 }) {
+  const productId = String(input.product_id || "").trim();
+  if (!productId) throw new Error("Product is required for a review");
+
   const newReview: ProductReview = {
     id: "rev-" + Math.random().toString(36).substring(2, 11),
-    product_id: input.product_id,
+    product_id: productId,
     customer_name: input.customer_name,
     rating: input.rating,
     body: input.body,
@@ -101,24 +91,27 @@ export async function submitProductReview(input: {
     created_at: new Date().toISOString(),
   };
 
-  if (!isUUID(input.product_id)) {
-    saveLocalReview(input.product_id, newReview);
-    return;
-  }
-
   try {
-    const { error } = await supabase.from("product_reviews").insert({
-      product_id: input.product_id,
-      customer_name: input.customer_name,
-      rating: input.rating,
-      body: input.body,
-      verified: !!input.user_id,
-      user_id: input.user_id,
-    });
+    const { data, error } = await supabase
+      .from("product_reviews")
+      .insert({
+        product_id: productId,
+        customer_name: input.customer_name,
+        rating: input.rating,
+        body: input.body,
+        verified: !!input.user_id,
+        user_id: input.user_id || null,
+      })
+      .select("id, created_at")
+      .maybeSingle();
     if (error) throw error;
-    saveLocalReview(input.product_id, newReview);
+    if (data?.id) {
+      newReview.id = data.id;
+      if (data.created_at) newReview.created_at = data.created_at;
+    }
+    saveLocalReview(productId, newReview);
   } catch (err) {
     console.warn("Supabase submitProductReview failed, falling back to local storage:", err);
-    saveLocalReview(input.product_id, newReview);
+    saveLocalReview(productId, newReview);
   }
 }

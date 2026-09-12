@@ -16,7 +16,8 @@ import {
 const COMPANY_LINKS = [
   { to: "/products", label: "All Smart Products" },
   { to: "/iot-sensors", label: "IoT Sensors Pakistan" },
-  { to: "/smart-home", label: "Smart Home & Automations" },
+  { to: "/smart-home", label: "Smart Home" },
+  { to: "/automations", label: "Automations" },
   { to: "/iot-solutions", hash: "about", label: "IoT Solutions Install" },
   { to: "/iot-solutions", hash: "quote", label: "Request a Business Quote" },
   { to: "/auth", label: "Customer Account" },
@@ -25,10 +26,11 @@ const COMPANY_LINKS = [
 ];
 
 const SEO_SHOP_LINKS = [
-  { to: "/iot-sensors", label: "Zigbee / WiFi / MQTT sensors" },
-  { to: "/products", search: { category: "Tuya Smart Sensors" }, label: "Tuya sensor Pakistan" },
-  { to: "/products", search: { category: "IoT Solutions" }, label: "IoT devices Pakistan" },
-  { to: "/products", search: { category: "Smart Home Automation" }, label: "Smart home kits" },
+  { to: "/zigbee-sensors", label: "Zigbee sensors" },
+  { to: "/wifi-sensors", label: "WiFi sensors" },
+  { to: "/mqtt-sensors", label: "MQTT sensors" },
+  { to: "/tuya-sensors", label: "Tuya sensor Pakistan" },
+  { to: "/iot-devices", label: "IoT devices Pakistan" },
   { to: "/", label: "SmartZone (smartzone.pk)" },
 ] as const;
 

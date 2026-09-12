@@ -93,7 +93,7 @@ function AccountProfile() {
               name="name"
               defaultValue={data?.full_name ?? ""}
               className="mt-1.5"
-              placeholder="Muhammad Huzaifa"
+              placeholder="Username"
             />
           </div>
           <div>
@@ -103,7 +103,7 @@ function AccountProfile() {
             <Input
               name="phone"
               defaultValue={data?.phone ?? ""}
-              placeholder="+92 332 3059259"
+              placeholder="+92 3XX XXXXXXX"
               className="mt-1.5"
             />
           </div>

@@ -1,12 +1,12 @@
-import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
-/** Daraz-style short URL alias: /product/:slug → /products/:slug */
+/** Daraz-style short URL alias: /product/:slug → /products/:slug (301). */
 export const Route = createFileRoute("/product/$slug")({
-  component: RedirectToProductsSlug,
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: "/products/$slug",
+      params: { slug: params.slug },
+      replace: true,
+    });
+  },
 });
-
-function RedirectToProductsSlug() {
-  const params = Route.useParams();
-  const slug = params?.slug || "";
-  return <Navigate to="/products/$slug" params={{ slug }} replace />;
-}

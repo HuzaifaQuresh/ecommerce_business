@@ -562,6 +562,11 @@ function AdminSettings() {
               value={meta.contact_email}
               onChange={(e) => setMeta({ ...meta, contact_email: e.target.value })}
             />
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Outbound replies need Worker secret <span className="font-mono">RESEND_API_KEY</span>{" "}
+              (resend.com, verify smartzone.pk). Without it, Cloudflare only mails your verified
+              Gmail and opens Gmail compose for customers.
+            </p>
           </div>
           <div>
             <Label>Contact phone</Label>
@@ -580,7 +585,9 @@ function AdminSettings() {
               onChange={(e) => setMeta({ ...meta, google_analytics_id: e.target.value })}
             />
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Optional. Saves to site settings and loads GA4 on the storefront (SEO audits / traffic).
+              Required for SEO tools that expect Google Analytics. Create a GA4 property at
+              analytics.google.com, paste the Measurement ID (G-…), then Save. Storefront loads it
+              async and tracks SPA page views.
             </p>
           </div>
         </div>
@@ -667,7 +674,7 @@ function AdminSettings() {
             <Label>WhatsApp number</Label>
             <Input
               className="mt-1.5"
-              placeholder="+92 332 3059259"
+              placeholder="+92 3XX XXXXXXX"
               value={meta.whatsapp_number}
               onChange={(e) => setMeta({ ...meta, whatsapp_number: e.target.value })}
             />

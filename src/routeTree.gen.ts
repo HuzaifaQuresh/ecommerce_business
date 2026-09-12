@@ -14,22 +14,30 @@ import { Route as R403RouteImport } from './routes/403'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AutomationsRouteImport } from './routes/automations'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as IotDevicesRouteImport } from './routes/iot-devices'
 import { Route as IotSensorsRouteImport } from './routes/iot-sensors'
 import { Route as IotSolutionsRouteImport } from './routes/iot-solutions'
+import { Route as MqttSensorsRouteImport } from './routes/mqtt-sensors'
 import { Route as ProductsRouteImport } from './routes/products'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SmartHomeRouteImport } from './routes/smart-home'
+import { Route as TuyaSensorsRouteImport } from './routes/tuya-sensors'
 import { Route as VendorRouteImport } from './routes/vendor'
+import { Route as WifiSensorsRouteImport } from './routes/wifi-sensors'
+import { Route as ZigbeeSensorsRouteImport } from './routes/zigbee-sensors'
 import { Route as AccountIndexRouteImport } from './routes/account.index'
 import { Route as AccountOrdersRouteImport } from './routes/account.orders'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
+import { Route as AdminAuditRouteImport } from './routes/admin.audit'
 import { Route as AdminInboxRouteImport } from './routes/admin.inbox'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminProductsRouteImport } from './routes/admin.products'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminSiteSurveyRouteImport } from './routes/admin.site-survey'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminVouchersRouteImport } from './routes/admin.vouchers'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
@@ -77,6 +85,11 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AutomationsRoute = AutomationsRouteImport.update({
+  id: '/automations',
+  path: '/automations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CartRoute = CartRouteImport.update({
   id: '/cart',
   path: '/cart',
@@ -87,6 +100,11 @@ const CheckoutRoute = CheckoutRouteImport.update({
   path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IotDevicesRoute = IotDevicesRouteImport.update({
+  id: '/iot-devices',
+  path: '/iot-devices',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IotSensorsRoute = IotSensorsRouteImport.update({
   id: '/iot-sensors',
   path: '/iot-sensors',
@@ -95,6 +113,11 @@ const IotSensorsRoute = IotSensorsRouteImport.update({
 const IotSolutionsRoute = IotSolutionsRouteImport.update({
   id: '/iot-solutions',
   path: '/iot-solutions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MqttSensorsRoute = MqttSensorsRouteImport.update({
+  id: '/mqtt-sensors',
+  path: '/mqtt-sensors',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProductsRoute = ProductsRouteImport.update({
@@ -112,9 +135,24 @@ const SmartHomeRoute = SmartHomeRouteImport.update({
   path: '/smart-home',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TuyaSensorsRoute = TuyaSensorsRouteImport.update({
+  id: '/tuya-sensors',
+  path: '/tuya-sensors',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VendorRoute = VendorRouteImport.update({
   id: '/vendor',
   path: '/vendor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WifiSensorsRoute = WifiSensorsRouteImport.update({
+  id: '/wifi-sensors',
+  path: '/wifi-sensors',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZigbeeSensorsRoute = ZigbeeSensorsRouteImport.update({
+  id: '/zigbee-sensors',
+  path: '/zigbee-sensors',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountIndexRoute = AccountIndexRouteImport.update({
@@ -137,6 +175,11 @@ const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAuditRoute = AdminAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminInboxRoute = AdminInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
@@ -155,6 +198,11 @@ const AdminProductsRoute = AdminProductsRouteImport.update({
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSiteSurveyRoute = AdminSiteSurveyRouteImport.update({
+  id: '/site-survey',
+  path: '/site-survey',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
@@ -269,20 +317,28 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/automations': typeof AutomationsRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/iot-devices': typeof IotDevicesRoute
   '/iot-sensors': typeof IotSensorsRoute
   '/iot-solutions': typeof IotSolutionsRoute
+  '/mqtt-sensors': typeof MqttSensorsRoute
   '/products': typeof ProductsRouteWithChildren
   '/setup': typeof SetupRoute
   '/smart-home': typeof SmartHomeRoute
+  '/tuya-sensors': typeof TuyaSensorsRoute
   '/vendor': typeof VendorRouteWithChildren
+  '/wifi-sensors': typeof WifiSensorsRoute
+  '/zigbee-sensors': typeof ZigbeeSensorsRoute
   '/account/orders': typeof AccountOrdersRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/audit': typeof AdminAuditRoute
   '/admin/inbox': typeof AdminInboxRoute
   '/admin/orders': typeof AdminOrdersRouteWithChildren
   '/admin/products': typeof AdminProductsRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/site-survey': typeof AdminSiteSurveyRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/vouchers': typeof AdminVouchersRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -311,16 +367,24 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/403': typeof R403Route
   '/auth': typeof AuthRouteWithChildren
+  '/automations': typeof AutomationsRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/iot-devices': typeof IotDevicesRoute
   '/iot-sensors': typeof IotSensorsRoute
   '/iot-solutions': typeof IotSolutionsRoute
+  '/mqtt-sensors': typeof MqttSensorsRoute
   '/setup': typeof SetupRoute
   '/smart-home': typeof SmartHomeRoute
+  '/tuya-sensors': typeof TuyaSensorsRoute
+  '/wifi-sensors': typeof WifiSensorsRoute
+  '/zigbee-sensors': typeof ZigbeeSensorsRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/audit': typeof AdminAuditRoute
   '/admin/inbox': typeof AdminInboxRoute
   '/admin/products': typeof AdminProductsRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/site-survey': typeof AdminSiteSurveyRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/vouchers': typeof AdminVouchersRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -352,20 +416,28 @@ export interface FileRoutesById {
   '/account': typeof AccountRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/automations': typeof AutomationsRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/iot-devices': typeof IotDevicesRoute
   '/iot-sensors': typeof IotSensorsRoute
   '/iot-solutions': typeof IotSolutionsRoute
+  '/mqtt-sensors': typeof MqttSensorsRoute
   '/products': typeof ProductsRouteWithChildren
   '/setup': typeof SetupRoute
   '/smart-home': typeof SmartHomeRoute
+  '/tuya-sensors': typeof TuyaSensorsRoute
   '/vendor': typeof VendorRouteWithChildren
+  '/wifi-sensors': typeof WifiSensorsRoute
+  '/zigbee-sensors': typeof ZigbeeSensorsRoute
   '/account/orders': typeof AccountOrdersRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/audit': typeof AdminAuditRoute
   '/admin/inbox': typeof AdminInboxRoute
   '/admin/orders': typeof AdminOrdersRouteWithChildren
   '/admin/products': typeof AdminProductsRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/site-survey': typeof AdminSiteSurveyRoute
   '/admin/users': typeof AdminUsersRoute
   '/admin/vouchers': typeof AdminVouchersRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -398,20 +470,28 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/auth'
+    | '/automations'
     | '/cart'
     | '/checkout'
+    | '/iot-devices'
     | '/iot-sensors'
     | '/iot-solutions'
+    | '/mqtt-sensors'
     | '/products'
     | '/setup'
     | '/smart-home'
+    | '/tuya-sensors'
     | '/vendor'
+    | '/wifi-sensors'
+    | '/zigbee-sensors'
     | '/account/orders'
     | '/admin/analytics'
+    | '/admin/audit'
     | '/admin/inbox'
     | '/admin/orders'
     | '/admin/products'
     | '/admin/settings'
+    | '/admin/site-survey'
     | '/admin/users'
     | '/admin/vouchers'
     | '/auth/callback'
@@ -440,16 +520,24 @@ export interface FileRouteTypes {
     | '/'
     | '/403'
     | '/auth'
+    | '/automations'
     | '/cart'
     | '/checkout'
+    | '/iot-devices'
     | '/iot-sensors'
     | '/iot-solutions'
+    | '/mqtt-sensors'
     | '/setup'
     | '/smart-home'
+    | '/tuya-sensors'
+    | '/wifi-sensors'
+    | '/zigbee-sensors'
     | '/admin/analytics'
+    | '/admin/audit'
     | '/admin/inbox'
     | '/admin/products'
     | '/admin/settings'
+    | '/admin/site-survey'
     | '/admin/users'
     | '/admin/vouchers'
     | '/auth/callback'
@@ -480,20 +568,28 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/auth'
+    | '/automations'
     | '/cart'
     | '/checkout'
+    | '/iot-devices'
     | '/iot-sensors'
     | '/iot-solutions'
+    | '/mqtt-sensors'
     | '/products'
     | '/setup'
     | '/smart-home'
+    | '/tuya-sensors'
     | '/vendor'
+    | '/wifi-sensors'
+    | '/zigbee-sensors'
     | '/account/orders'
     | '/admin/analytics'
+    | '/admin/audit'
     | '/admin/inbox'
     | '/admin/orders'
     | '/admin/products'
     | '/admin/settings'
+    | '/admin/site-survey'
     | '/admin/users'
     | '/admin/vouchers'
     | '/auth/callback'
@@ -525,14 +621,20 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  AutomationsRoute: typeof AutomationsRoute
   CartRoute: typeof CartRoute
   CheckoutRoute: typeof CheckoutRoute
+  IotDevicesRoute: typeof IotDevicesRoute
   IotSensorsRoute: typeof IotSensorsRoute
   IotSolutionsRoute: typeof IotSolutionsRoute
+  MqttSensorsRoute: typeof MqttSensorsRoute
   ProductsRoute: typeof ProductsRouteWithChildren
   SetupRoute: typeof SetupRoute
   SmartHomeRoute: typeof SmartHomeRoute
+  TuyaSensorsRoute: typeof TuyaSensorsRoute
   VendorRoute: typeof VendorRouteWithChildren
+  WifiSensorsRoute: typeof WifiSensorsRoute
+  ZigbeeSensorsRoute: typeof ZigbeeSensorsRoute
   ProductSlugRoute: typeof ProductSlugRoute
 }
 
@@ -573,6 +675,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/automations': {
+      id: '/automations'
+      path: '/automations'
+      fullPath: '/automations'
+      preLoaderRoute: typeof AutomationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cart': {
       id: '/cart'
       path: '/cart'
@@ -587,6 +696,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/iot-devices': {
+      id: '/iot-devices'
+      path: '/iot-devices'
+      fullPath: '/iot-devices'
+      preLoaderRoute: typeof IotDevicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/iot-sensors': {
       id: '/iot-sensors'
       path: '/iot-sensors'
@@ -599,6 +715,13 @@ declare module '@tanstack/react-router' {
       path: '/iot-solutions'
       fullPath: '/iot-solutions'
       preLoaderRoute: typeof IotSolutionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mqtt-sensors': {
+      id: '/mqtt-sensors'
+      path: '/mqtt-sensors'
+      fullPath: '/mqtt-sensors'
+      preLoaderRoute: typeof MqttSensorsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/products': {
@@ -622,11 +745,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SmartHomeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tuya-sensors': {
+      id: '/tuya-sensors'
+      path: '/tuya-sensors'
+      fullPath: '/tuya-sensors'
+      preLoaderRoute: typeof TuyaSensorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/vendor': {
       id: '/vendor'
       path: '/vendor'
       fullPath: '/vendor'
       preLoaderRoute: typeof VendorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wifi-sensors': {
+      id: '/wifi-sensors'
+      path: '/wifi-sensors'
+      fullPath: '/wifi-sensors'
+      preLoaderRoute: typeof WifiSensorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zigbee-sensors': {
+      id: '/zigbee-sensors'
+      path: '/zigbee-sensors'
+      fullPath: '/zigbee-sensors'
+      preLoaderRoute: typeof ZigbeeSensorsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account/': {
@@ -657,6 +801,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAnalyticsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/audit': {
+      id: '/admin/audit'
+      path: '/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AdminAuditRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/inbox': {
       id: '/admin/inbox'
       path: '/inbox'
@@ -683,6 +834,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/admin/settings'
       preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/site-survey': {
+      id: '/admin/site-survey'
+      path: '/site-survey'
+      fullPath: '/admin/site-survey'
+      preLoaderRoute: typeof AdminSiteSurveyRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/users': {
@@ -878,10 +1036,12 @@ const AdminOrdersRouteWithChildren = AdminOrdersRoute._addFileChildren(
 
 interface AdminRouteChildren {
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
+  AdminAuditRoute: typeof AdminAuditRoute
   AdminInboxRoute: typeof AdminInboxRoute
   AdminOrdersRoute: typeof AdminOrdersRouteWithChildren
   AdminProductsRoute: typeof AdminProductsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminSiteSurveyRoute: typeof AdminSiteSurveyRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminVouchersRoute: typeof AdminVouchersRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -889,10 +1049,12 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAnalyticsRoute: AdminAnalyticsRoute,
+  AdminAuditRoute: AdminAuditRoute,
   AdminInboxRoute: AdminInboxRoute,
   AdminOrdersRoute: AdminOrdersRouteWithChildren,
   AdminProductsRoute: AdminProductsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
+  AdminSiteSurveyRoute: AdminSiteSurveyRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminVouchersRoute: AdminVouchersRoute,
   AdminIndexRoute: AdminIndexRoute,
@@ -961,14 +1123,20 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  AutomationsRoute: AutomationsRoute,
   CartRoute: CartRoute,
   CheckoutRoute: CheckoutRoute,
+  IotDevicesRoute: IotDevicesRoute,
   IotSensorsRoute: IotSensorsRoute,
   IotSolutionsRoute: IotSolutionsRoute,
+  MqttSensorsRoute: MqttSensorsRoute,
   ProductsRoute: ProductsRouteWithChildren,
   SetupRoute: SetupRoute,
   SmartHomeRoute: SmartHomeRoute,
+  TuyaSensorsRoute: TuyaSensorsRoute,
   VendorRoute: VendorRouteWithChildren,
+  WifiSensorsRoute: WifiSensorsRoute,
+  ZigbeeSensorsRoute: ZigbeeSensorsRoute,
   ProductSlugRoute: ProductSlugRoute,
 }
 export const routeTree = rootRouteImport

@@ -31,7 +31,6 @@ import { fetchSiteSettings, SITE_SETTINGS_QUERY_KEY, SITE_SETTINGS_STALE_MS } fr
 import {
   DEFAULT_META,
   absoluteUrl,
-  canonicalLink,
   ldJsonScript,
   organizationJsonLd,
   websiteJsonLd,
@@ -59,10 +58,31 @@ function NotFoundComponent() {
   );
 }
 
+function isChunkLoadError(error: unknown) {
+  const msg = error instanceof Error ? error.message : String(error ?? "");
+  return /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Loading chunk [\d]+ failed/i.test(
+    msg,
+  );
+}
+
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   const detail = error?.message?.trim() || (error ? String(error) : "");
+  const chunkMiss = isChunkLoadError(error);
+
+  useEffect(() => {
+    if (!chunkMiss) return;
+    try {
+      const key = "sz:chunk-reload";
+      const last = Number(sessionStorage.getItem(key) || "0");
+      if (Date.now() - last < 15_000) return;
+      sessionStorage.setItem(key, String(Date.now()));
+      window.location.reload();
+    } catch {
+      /* ignore */
+    }
+  }, [chunkMiss]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -71,9 +91,11 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
           This page didn't load
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          {chunkMiss
+            ? "A newer version of the site just rolled out. Reloading to pick up the latest files…"
+            : "Something went wrong on our end. You can try refreshing or head back home."}
         </p>
-        {detail ? (
+        {detail && !chunkMiss ? (
           <pre className="mt-3 max-h-32 overflow-auto rounded-md border bg-muted/60 px-3 py-2 text-left text-[11px] leading-snug text-muted-foreground whitespace-pre-wrap">
             {detail}
           </pre>
@@ -81,6 +103,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
+              if (chunkMiss) {
+                window.location.reload();
+                return;
+              }
               router.invalidate();
               reset();
             }}
@@ -129,17 +155,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:image", content: absoluteUrl("/og-image.svg") },
     ],
     links: [
-      canonicalLink("/"),
-      { rel: "preconnect", href: "https://images.unsplash.com" },
+      // Canonical is set per-route only — a root "/" canonical duplicated every page
+      // and triggered GSC "Duplicate without user-selected canonical".
+      { rel: "preconnect", href: "https://images.unsplash.com", crossOrigin: "anonymous" },
       { rel: "dns-prefetch", href: "https://images.unsplash.com" },
-      { rel: "icon", href: "/favicon.ico", sizes: "any" },
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
-      { rel: "shortcut icon", href: "/favicon.ico" },
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
+      { rel: "preconnect", href: "https://sperknmkbyrbmebipnfq.supabase.co" },
+      { rel: "dns-prefetch", href: "https://www.googletagmanager.com" },
+      { rel: "icon", href: "/favicon.svg?v=3", type: "image/svg+xml", sizes: "any" },
+      { rel: "icon", href: "/favicon-32x32.png?v=3", type: "image/png", sizes: "32x32" },
+      { rel: "icon", href: "/favicon-16x16.png?v=3", type: "image/png", sizes: "16x16" },
+      { rel: "icon", href: "/favicon.ico?v=3", sizes: "any" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png?v=3", sizes: "180x180" },
+      { rel: "shortcut icon", href: "/favicon.ico?v=3" },
+      // Render-blocking stylesheet — avoids FOUC on refresh (async print→all caused unstyled flash).
+      { rel: "stylesheet", href: appCss },
     ],
     scripts: [ldJsonScript(organizationJsonLd()), ldJsonScript(websiteJsonLd())],
   }),

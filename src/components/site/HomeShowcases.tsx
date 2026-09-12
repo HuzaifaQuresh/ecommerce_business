@@ -51,8 +51,10 @@ function CategoryThumb({
       key={photo}
       src={photo}
       alt={alt}
-      className="h-full w-full object-cover"
-      loading="eager"
+      width={88}
+      height={88}
+      className="h-full w-full object-contain object-center"
+      loading="lazy"
       decoding="async"
       draggable={false}
     />

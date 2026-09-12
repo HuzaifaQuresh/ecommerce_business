@@ -74,10 +74,7 @@ function Index() {
 
   return (
     <div className="bg-[#F8FAFC] min-h-screen pb-12">
-      <h1 className="sr-only">
-        SmartZone Pakistan — smart home, IoT sensors, Zigbee, WiFi, MQTT &amp; Tuya devices at
-        smartzone.pk
-      </h1>
+      <h1 className="sr-only">SmartZone IoT Sensors Pakistan</h1>
 
       <HomeHeroSlider />
 
@@ -102,7 +99,7 @@ function Index() {
           />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             {featuredProducts.map((p, idx) => (
-              <ProductCard key={p.id} p={p} priority={idx < 6} />
+              <ProductCard key={p.id} p={p} priority={idx < 2} />
             ))}
           </div>
         </section>
@@ -135,40 +132,6 @@ function Index() {
       </section>
 
       <HomeSolutionsStrip />
-
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 mt-10 mb-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">
-          <h2 className="text-lg font-bold text-[#0B192C] sm:text-xl">
-            SmartZone Pakistan — IoT sensors, smart home & automations
-          </h2>
-          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600">
-            Search for <strong>SmartZone</strong>, <strong>smartzone pk</strong>,{" "}
-            <strong>IoT sensor</strong>, <strong>Zigbee sensors</strong>,{" "}
-            <strong>WiFi sensors</strong>, <strong>MQTT sensors</strong>,{" "}
-            <strong>Tuya sensor Pakistan</strong>, or <strong>IoT devices Pakistan</strong> —
-            you are in the right place. Shop hardware on smartzone.pk or book a smart home
-            automation install.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm font-semibold">
-            <Link to="/iot-sensors" className="text-[#0052B4] hover:underline">
-              IoT sensors
-            </Link>
-            <Link to="/smart-home" className="text-[#0052B4] hover:underline">
-              Smart home
-            </Link>
-            <Link
-              to="/products"
-              search={{ category: "Tuya Smart Sensors" }}
-              className="text-[#0052B4] hover:underline"
-            >
-              Tuya sensors
-            </Link>
-            <Link to="/iot-solutions" className="text-[#0052B4] hover:underline">
-              IoT solutions
-            </Link>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

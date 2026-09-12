@@ -83,25 +83,25 @@ const TOPICS = [
     id: "zigbee",
     title: "Zigbee sensors",
     body: "Low-power Zigbee sensors for doors, motion, climate, and leak detection — pair with a Tuya Zigbee gateway for reliable mesh automations.",
-    search: { category: "Tuya Smart Sensors" },
+    to: "/zigbee-sensors" as const,
   },
   {
     id: "wifi",
     title: "WiFi sensors",
     body: "WiFi sensors that talk directly to the cloud or Smart Life app — ideal when you need fast install without a separate hub.",
-    search: { category: "Tuya Smart Sensors" },
+    to: "/wifi-sensors" as const,
   },
   {
     id: "mqtt",
     title: "MQTT sensors",
     body: "MQTT-friendly IoT sensor nodes and gateways for on-prem dashboards, Jetson edge, and industrial telemetry where cloud round-trip is optional.",
-    search: { category: "IoT Solutions" },
+    to: "/mqtt-sensors" as const,
   },
   {
     id: "tuya",
     title: "Tuya sensors Pakistan",
     body: "Official Tuya / TYSH sensor SKUs priced in PKR at SmartZone — temperature, humidity, PIR, gas, smoke, and contact sensors for villas and sites.",
-    search: { category: "Tuya Smart Sensors" },
+    to: "/tuya-sensors" as const,
   },
 ] as const;
 
@@ -147,11 +147,10 @@ function IotSensorsPage() {
             <h2 className="text-lg font-bold text-[#0B192C]">{topic.title}</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">{topic.body}</p>
             <Link
-              to="/products"
-              search={topic.search}
+              to={topic.to}
               className="mt-3 inline-flex text-sm font-semibold text-[#0052B4] hover:underline"
             >
-              View products →
+              Open guide →
             </Link>
           </article>
         ))}

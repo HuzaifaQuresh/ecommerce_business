@@ -243,11 +243,12 @@ export function ProductEditor({
             .update(payload)
             .eq("id", product.id)
             .eq("vendor_id", vendorId);
-          if (error) console.warn("Supabase update error:", error);
+          if (error) throw error;
+          toast.success("Product updated on smartzone.pk");
         } catch (err: any) {
           console.warn("Supabase update failed, saved locally:", err);
+          toast.error(err?.message || "Saved locally only — DB update failed");
         }
-        toast.success("Product updated successfully");
       } else {
         // Add
         try {
@@ -256,18 +257,21 @@ export function ProductEditor({
             .insert({ ...payload, slug: newSlug })
             .select("id")
             .maybeSingle();
-          if (!error && data?.id) {
+          if (error) throw error;
+          if (data?.id) {
             saveLocalProduct({ ...localProduct, id: data.id } as any);
           }
+          toast.success("Product added on smartzone.pk");
         } catch (err: any) {
           console.warn("Supabase insert failed, saved locally:", err);
+          toast.error(err?.message || "Saved locally only — DB insert failed");
         }
-        toast.success("Product added successfully");
       }
 
       qc.invalidateQueries({ queryKey: ["vendor-products"] });
       qc.invalidateQueries({ queryKey: ["admin-products"] });
       qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["home-products"] });
       qc.invalidateQueries({ queryKey: ["all-products"] });
       qc.invalidateQueries({ queryKey: ["product"] });
       qc.invalidateQueries({ queryKey: ["related"] });
